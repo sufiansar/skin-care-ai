@@ -5,14 +5,14 @@ services:
   # ── FastAPI App ───────────────────────────────────────────────
   api:
     build: .
-    container_name: procurement_api
+    container_name: skincare_api
     ports:
       - "8073:8000"
     env_file:
       - .env
     environment:
-      - MONGODB_URL=mongodb://mongo:27017
-      - MONGODB_DB_NAME=procurement_db
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongo:27017}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-skincare_db}
     volumes:
       - .:/app                        # hot reload in dev
       - uploads_data:/app/uploads     # persist uploaded files
@@ -21,12 +21,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - procurement_net
+      - skincare_net
 
   # ── MongoDB ───────────────────────────────────────────────────
   mongo:
     image: mongo:7.0
-    container_name: procurement_mongo
+    container_name: skincare_mongo
     ports:
       - "27019:27017"
     volumes:
@@ -38,12 +38,12 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - procurement_net
+      - skincare_net
 
   # ── Mongo Express (optional UI) ───────────────────────────────
   mongo-express:
     image: mongo-express:latest
-    container_name: procurement_mongo_ui
+    container_name: skincare_mongo_ui
     ports:
       - "8087:8081"
     environment:
@@ -56,7 +56,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - procurement_net
+      - skincare_net
 
 # ── Volumes ────────────────────────────────────────────────────
 volumes:
@@ -65,5 +65,5 @@ volumes:
 
 # ── Network ────────────────────────────────────────────────────
 networks:
-  procurement_net:
+  skincare_net:
     driver: bridge

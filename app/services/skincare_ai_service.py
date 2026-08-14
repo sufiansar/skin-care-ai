@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import httpx
@@ -239,8 +240,8 @@ def get_free_google_tts_url(text: str, lang: str = "bn") -> str:
 
 async def call_openrouter_free_ai(messages_payload: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
-    Tier 2 Fallback: Call OpenRouter Free AI Models (e.g. llama-3.3-70b-instruct:free, gemma-2-9b-it:free)
-    when paid OpenAI API fails or is unconfigured.
+    Tier 3 Fallback: Call OpenRouter Free AI Models (e.g. llama-3.3-70b-instruct:free, gemma-2-9b-it:free)
+    when OpenAI and Claude APIs fail or are unconfigured.
     """
     try:
         headers = {
@@ -281,6 +282,174 @@ async def call_openrouter_free_ai(messages_payload: List[Dict[str, Any]]) -> Opt
         return None
 
 
+async def call_claude_ai(messages_payload: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Tier 2 Fallback / Alternative: Call Anthropic Claude API (e.g. claude-3-5-sonnet-20241022)
+    using CLAUDE_API_KEY or ANTHROPIC_API_KEY.
+    """
+    api_key = settings.effective_claude_api_key
+    if not api_key:
+        return None
+
+    try:
+        system_prompt = SYSTEM_PROMPT
+        claude_messages = []
+
+        for msg in messages_payload:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role == "system":
+                system_prompt = content
+            elif role in ["user", "assistant"]:
+                claude_messages.append({"role": role, "content": content})
+
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+
+        payload = {
+            "model": settings.CLAUDE_MODEL or "claude-3-5-sonnet-20241022",
+            "max_tokens": 2500,
+            "system": system_prompt,
+            "messages": claude_messages,
+            "temperature": 0.3,
+        }
+
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            raw_content = ""
+            if "content" in data and len(data["content"]) > 0:
+                raw_content = data["content"][0].get("text", "").strip()
+
+            if raw_content.startswith("```"):
+                lines = raw_content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                raw_content = "\n".join(lines).strip()
+
+            return json.loads(raw_content)
+    except Exception as e:
+        logger.error(f"Claude API call error: {e}")
+        return None
+
+
+async def call_claude_vision_ai(
+    image_url: Optional[str] = None,
+    image_base64: Optional[str] = None,
+    user_message: Optional[str] = "Analyze this image",
+    skin_type: Optional[str] = None,
+    top_products: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Call Claude Multimodal Vision API for skin photo analysis or product recognition in Bengali.
+    """
+    api_key = settings.effective_claude_api_key
+    if not api_key:
+        return None
+
+    try:
+        media_type = "image/jpeg"
+        base64_data = ""
+
+        if image_base64:
+            if image_base64.startswith("data:"):
+                header, base64_data = image_base64.split(",", 1)
+                media_type = header.split(";")[0].replace("data:", "")
+            else:
+                base64_data = image_base64
+        elif image_url:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.get(image_url)
+                res.raise_for_status()
+                content_type = res.headers.get("content-type", "")
+                if "png" in content_type:
+                    media_type = "image/png"
+                elif "webp" in content_type:
+                    media_type = "image/webp"
+                elif "gif" in content_type:
+                    media_type = "image/gif"
+                base64_data = base64.b64encode(res.content).decode("utf-8")
+
+        if not base64_data:
+            return None
+
+        context_payload = {
+            "user_skin_type": skin_type or "Not specified",
+            "store_products_context": top_products or [],
+        }
+
+        prompt_text = (
+            f"SKINCARE PRODUCTS CONTEXT:\n{json.dumps(context_payload, ensure_ascii=False, default=str)}\n\n"
+            f"USER QUESTION: {user_message or 'Analyze this skincare or face photo in Bengali.'}"
+        )
+
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+
+        payload = {
+            "model": settings.CLAUDE_MODEL or "claude-3-5-sonnet-20241022",
+            "max_tokens": 2500,
+            "system": VISION_SYSTEM_PROMPT,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": base64_data,
+                            },
+                        },
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+        }
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            raw_content = ""
+            if "content" in data and len(data["content"]) > 0:
+                raw_content = data["content"][0].get("text", "").strip()
+
+            if raw_content.startswith("```"):
+                lines = raw_content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                raw_content = "\n".join(lines).strip()
+
+            return json.loads(raw_content)
+    except Exception as e:
+        logger.error(f"Claude Vision API call error: {e}")
+        return None
+
+
 async def process_skincare_symptom_analysis(
     user_message: str,
     skin_type: Optional[str] = None,
@@ -289,10 +458,11 @@ async def process_skincare_symptom_analysis(
     voice_enabled: bool = True,
 ) -> Dict[str, Any]:
     """
-    Process skin symptom query using 3-Tier Fallback Engine:
+    Process skin symptom query using 4-Tier Fallback Engine:
     - Tier 1: OpenAI GPT-4o-Mini
-    - Tier 2: OpenRouter Free AI (llama-3.3-70b-instruct:free)
-    - Tier 3: Local Rule-Based Skincare Advisor
+    - Tier 2: Anthropic Claude 3.5 Sonnet (CLAUDE_API_KEY / ANTHROPIC_API_KEY)
+    - Tier 3: OpenRouter Free AI (llama-3.3-70b-instruct:free)
+    - Tier 4: Local Rule-Based Skincare Advisor
     """
     top_products = await get_rag_skincare_products(user_message=user_message, skin_type=skin_type)
 
@@ -317,114 +487,81 @@ async def process_skincare_symptom_analysis(
     )
     messages_payload.append({"role": "user", "content": user_content})
 
-    if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.strip() == "":
-        logger.info("OpenAI API key missing. Attempting OpenRouter free AI fallback...")
-        openrouter_parsed = await call_openrouter_free_ai(messages_payload)
-        if openrouter_parsed and isinstance(openrouter_parsed, dict):
-            reply = openrouter_parsed.get("reply") or "Symptom analysis completed via OpenRouter Free AI."
-            voice_text = openrouter_parsed.get("voice_text") or "I have analyzed your skin symptoms."
-            rec_products = openrouter_parsed.get("recommended_products") or []
-            routine_steps = openrouter_parsed.get("routine_steps") or {
-                "AM": ["1. Cleanser", "2. Sunscreen"],
-                "PM": ["1. Cleanser", "2. Night Cream"]
+    parsed_result = None
+
+    # Tier 1: OpenAI
+    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip():
+        try:
+            payload = {
+                "model": "gpt-4o-mini",
+                "temperature": 0.3,
+                "messages": messages_payload,
             }
-            chart = openrouter_parsed.get("chart") if include_chart else None
-            summary = openrouter_parsed.get("summary") or {"skin_type": skin_type or "General"}
-            suggested = openrouter_parsed.get("suggested_questions") or ["How should I use these?", "What sunscreen is best?"]
-            return {
-                "reply": reply,
-                "voice_text": voice_text,
-                "voice_audio_url": get_free_google_tts_url(voice_text) if voice_enabled else None,
-                "recommended_products": rec_products,
-                "routine_steps": routine_steps,
-                "chart": chart,
-                "summary": summary,
-                "suggested_questions": suggested,
-            }
-        return generate_fallback_skincare_advisor(user_message, top_products, skin_type)
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+                raw_content = data["choices"][0]["message"]["content"].strip()
 
-    payload = {
-        "model": "gpt-4o-mini",
-        "temperature": 0.3,
-        "messages": messages_payload,
-    }
+                if raw_content.startswith("```"):
+                    lines = raw_content.split("\n")
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    raw_content = "\n".join(lines).strip()
 
-    try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
-            raw_content = data["choices"][0]["message"]["content"].strip()
+                parsed_result = json.loads(raw_content)
+        except Exception as e:
+            logger.warning(f"OpenAI call failed ({e}). Attempting Claude API fallback...")
 
-            if raw_content.startswith("```"):
-                lines = raw_content.split("\n")
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].startswith("```"):
-                    lines = lines[:-1]
-                raw_content = "\n".join(lines).strip()
+    # Tier 2: Claude (Anthropic API)
+    if not parsed_result and settings.effective_claude_api_key:
+        logger.info("Attempting Claude API (Anthropic) analysis...")
+        parsed_result = await call_claude_ai(messages_payload)
 
-            parsed = json.loads(raw_content)
+    # Tier 3: OpenRouter
+    if not parsed_result:
+        logger.info("Attempting OpenRouter free AI fallback...")
+        parsed_result = await call_openrouter_free_ai(messages_payload)
 
-            reply = parsed.get("reply") or "Symptom analysis completed."
-            voice_text = parsed.get("voice_text") or "I have analyzed your skin symptoms and recommended custom products for your routine."
-            rec_products = parsed.get("recommended_products") or []
-            routine_steps = parsed.get("routine_steps") or {
-                "AM": ["1. Cleanser", "2. Serum", "3. Moisturizer", "4. Sunscreen"],
-                "PM": ["1. Cleanser", "2. Treatment", "3. Night Cream"]
-            }
-            chart = parsed.get("chart") if include_chart else None
-            summary = parsed.get("summary") or {"skin_type": skin_type or "General"}
-            suggested = parsed.get("suggested_questions") or [
-                "How should I layer these products?",
-                "Which sunscreen is best for acne-prone skin?",
-            ]
+    # Return formatted result if any AI provider succeeded
+    if parsed_result and isinstance(parsed_result, dict):
+        reply = parsed_result.get("reply") or "Symptom analysis completed."
+        voice_text = parsed_result.get("voice_text") or "I have analyzed your skin symptoms and recommended custom products for your routine."
+        rec_products = parsed_result.get("recommended_products") or []
+        routine_steps = parsed_result.get("routine_steps") or {
+            "AM": ["1. Cleanser", "2. Serum", "3. Moisturizer", "4. Sunscreen"],
+            "PM": ["1. Cleanser", "2. Treatment", "3. Night Cream"]
+        }
+        chart = parsed_result.get("chart") if include_chart else None
+        summary = parsed_result.get("summary") or {"skin_type": skin_type or "General"}
+        suggested = parsed_result.get("suggested_questions") or [
+            "How should I layer these products?",
+            "Which sunscreen is best for acne-prone skin?",
+        ]
 
-            return {
-                "reply": reply,
-                "voice_text": voice_text,
-                "voice_audio_url": get_free_google_tts_url(voice_text) if voice_enabled else None,
-                "recommended_products": rec_products,
-                "routine_steps": routine_steps,
-                "chart": chart,
-                "summary": summary,
-                "suggested_questions": suggested,
-            }
+        return {
+            "reply": reply,
+            "voice_text": voice_text,
+            "voice_audio_url": get_free_google_tts_url(voice_text) if voice_enabled else None,
+            "recommended_products": rec_products,
+            "routine_steps": routine_steps,
+            "chart": chart,
+            "summary": summary,
+            "suggested_questions": suggested,
+        }
 
-    except Exception as e:
-        logger.warning(f"OpenAI call failed ({e}). Attempting OpenRouter free AI fallback...")
-        openrouter_parsed = await call_openrouter_free_ai(messages_payload)
-        if openrouter_parsed and isinstance(openrouter_parsed, dict):
-            reply = openrouter_parsed.get("reply") or "Symptom analysis completed via OpenRouter Free AI."
-            voice_text = openrouter_parsed.get("voice_text") or "I have analyzed your skin symptoms."
-            rec_products = openrouter_parsed.get("recommended_products") or []
-            routine_steps = openrouter_parsed.get("routine_steps") or {
-                "AM": ["1. Cleanser", "2. Sunscreen"],
-                "PM": ["1. Cleanser", "2. Night Cream"]
-            }
-            chart = openrouter_parsed.get("chart") if include_chart else None
-            summary = openrouter_parsed.get("summary") or {"skin_type": skin_type or "General"}
-            suggested = openrouter_parsed.get("suggested_questions") or ["How should I use these?", "What sunscreen is best?"]
-            return {
-                "reply": reply,
-                "voice_text": voice_text,
-                "voice_audio_url": get_free_google_tts_url(voice_text) if voice_enabled else None,
-                "recommended_products": rec_products,
-                "routine_steps": routine_steps,
-                "chart": chart,
-                "summary": summary,
-                "suggested_questions": suggested,
-            }
-
-        logger.error(f"OpenRouter free AI fallback also failed. Using local rule-based advisor.")
-        return generate_fallback_skincare_advisor(user_message, top_products, skin_type)
+    # Tier 4: Local Rule-Based Advisor Fallback
+    logger.error("All AI providers unavailable or failed. Using local rule-based advisor.")
+    return generate_fallback_skincare_advisor(user_message, top_products, skin_type)
 
 
 # --- Feature 2: Ingredient Safety & Conflict Checker ---
@@ -822,15 +959,9 @@ async def process_skincare_vision_analysis(
     """
     top_products = await get_rag_skincare_products(user_message=user_message or "skin care", skin_type=skin_type)
 
-    if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.strip() == "":
-        logger.info("OpenAI API key missing. Returning fallback vision response in Bengali.")
-        fallback = generate_fallback_skincare_advisor(user_message or "Image analysis", top_products, skin_type)
-        fallback["reply"] = "### 📷 ছবি বিশ্লেষণ সম্পন্ন হয়েছে\n\nআপনার ছবির ওপর ভিত্তি করে ত্বকের যত্ন ও প্রয়োজনীয় প্রোডাক্ট রিকমেন্ড করা হলো:\n\n" + fallback["reply"]
-        fallback["image_analysis_type"] = "Skin Analysis"
-        fallback["detected_features"] = ["Acne / Breakouts", "Redness", "Dehydration"]
-        return fallback
+    parsed = None
 
-    # Build image source URL for OpenAI Vision API
+    # Build image target for OpenAI Vision API
     img_target = None
     if image_url:
         img_target = image_url
@@ -840,89 +971,97 @@ async def process_skincare_vision_analysis(
         else:
             img_target = image_base64
 
-    if not img_target:
-        return generate_fallback_skincare_advisor("Image missing", top_products, skin_type)
-
-    context_payload = {
-        "user_skin_type": skin_type or "Not specified",
-        "store_products_context": top_products,
-    }
-
-    user_content_list: List[Dict[str, Any]] = [
-        {
-            "type": "text",
-            "text": f"SKINCARE PRODUCTS CONTEXT:\n{json.dumps(context_payload, ensure_ascii=False, default=str)}\n\nUSER QUESTION: {user_message or 'Analyze this skincare or face photo in Bengali.'}"
-        },
-        {
-            "type": "image_url",
-            "image_url": {"url": img_target}
-        }
-    ]
-
-    messages_payload = [
-        {"role": "system", "content": VISION_SYSTEM_PROMPT},
-        {"role": "user", "content": user_content_list}
-    ]
-
-    payload = {
-        "model": "gpt-4o-mini",
-        "temperature": 0.2,
-        "messages": messages_payload,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-                    "Content-Type": "application/json",
+    # Tier 1: OpenAI Vision
+    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip() and img_target:
+        try:
+            context_payload = {
+                "user_skin_type": skin_type or "Not specified",
+                "store_products_context": top_products,
+            }
+            user_content_list: List[Dict[str, Any]] = [
+                {
+                    "type": "text",
+                    "text": f"SKINCARE PRODUCTS CONTEXT:\n{json.dumps(context_payload, ensure_ascii=False, default=str)}\n\nUSER QUESTION: {user_message or 'Analyze this skincare or face photo in Bengali.'}"
                 },
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
-            raw_content = data["choices"][0]["message"]["content"].strip()
-
-            if raw_content.startswith("```"):
-                lines = raw_content.split("\n")
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].startswith("```"):
-                    lines = lines[:-1]
-                raw_content = "\n".join(lines).strip()
-
-            parsed = json.loads(raw_content)
-
-            reply = parsed.get("reply") or "ছবি বিশ্লেষণ সম্পন্ন হয়েছে।"
-            voice_text = parsed.get("voice_text") or "আপনার ছবির ওপর ভিত্তি করে ত্বকের প্রয়োজনীয় প্রোডাক্ট রিকমেন্ড করা হলো।"
-            img_type = parsed.get("image_analysis_type") or "Skin Analysis"
-            detected = parsed.get("detected_features") or ["Skin Texture", "Sensitivity"]
-            rec_products = parsed.get("recommended_products") or []
-            routine_steps = parsed.get("routine_steps") or {
-                "AM": ["1. Cleanser", "2. Sunscreen"],
-                "PM": ["1. Cleanser", "2. Night Cream"]
+                {
+                    "type": "image_url",
+                    "image_url": {"url": img_target}
+                }
+            ]
+            messages_payload = [
+                {"role": "system", "content": VISION_SYSTEM_PROMPT},
+                {"role": "user", "content": user_content_list}
+            ]
+            payload = {
+                "model": "gpt-4o-mini",
+                "temperature": 0.2,
+                "messages": messages_payload,
             }
-            chart = parsed.get("chart")
-            suggested = parsed.get("suggested_questions") or ["কতদিন পর রেজাল্ট পাওয়া যাবে?", "সানস্ক্রিন কখন মাখব?"]
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+                raw_content = data["choices"][0]["message"]["content"].strip()
+                if raw_content.startswith("```"):
+                    lines = raw_content.split("\n")
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    raw_content = "\n".join(lines).strip()
+                parsed = json.loads(raw_content)
+        except Exception as e:
+            logger.warning(f"OpenAI Vision AI analysis failed ({e}). Attempting Claude Vision fallback...")
 
-            return {
-                "reply": reply,
-                "voice_text": voice_text,
-                "voice_audio_url": get_free_google_tts_url(voice_text),
-                "image_analysis_type": img_type,
-                "detected_features": detected,
-                "recommended_products": rec_products,
-                "routine_steps": routine_steps,
-                "chart": chart,
-                "summary": {"image_type": img_type, "detected_count": len(detected)},
-                "suggested_questions": suggested,
-            }
+    # Tier 2: Claude Vision AI
+    if not parsed and settings.effective_claude_api_key:
+        logger.info("Attempting Claude Vision API analysis...")
+        parsed = await call_claude_vision_ai(
+            image_url=image_url,
+            image_base64=image_base64,
+            user_message=user_message,
+            skin_type=skin_type,
+            top_products=top_products,
+        )
 
-    except Exception as e:
-        logger.error(f"OpenAI Vision AI analysis failed: {e}. Returning rule-based fallback.")
-        fallback = generate_fallback_skincare_advisor(user_message or "Image analysis", top_products, skin_type)
-        fallback["image_analysis_type"] = "Skin Analysis"
-        fallback["detected_features"] = ["Redness", "Pores", "Dryness"]
-        return fallback
+    if parsed and isinstance(parsed, dict):
+        reply = parsed.get("reply") or "ছবি বিশ্লেষণ সম্পন্ন হয়েছে।"
+        voice_text = parsed.get("voice_text") or "আপনার ছবির ওপর ভিত্তি করে ত্বকের প্রয়োজনীয় প্রোডাক্ট রিকমেন্ড করা হলো।"
+        img_type = parsed.get("image_analysis_type") or "Skin Analysis"
+        detected = parsed.get("detected_features") or ["Skin Texture", "Sensitivity"]
+        rec_products = parsed.get("recommended_products") or []
+        routine_steps = parsed.get("routine_steps") or {
+            "AM": ["1. Cleanser", "2. Sunscreen"],
+            "PM": ["1. Cleanser", "2. Night Cream"]
+        }
+        chart = parsed.get("chart")
+        suggested = parsed.get("suggested_questions") or ["কতদিন পর রেজাল্ট পাওয়া যাবে?", "সানস্ক্রিন কখন মাখব?"]
+
+        return {
+            "reply": reply,
+            "voice_text": voice_text,
+            "voice_audio_url": get_free_google_tts_url(voice_text),
+            "image_analysis_type": img_type,
+            "detected_features": detected,
+            "recommended_products": rec_products,
+            "routine_steps": routine_steps,
+            "chart": chart,
+            "summary": {"image_type": img_type, "detected_count": len(detected)},
+            "suggested_questions": suggested,
+        }
+
+    # Tier 3: Local Rule-Based Vision Fallback in Bengali
+    logger.info("All Vision AI providers unavailable/failed. Returning rule-based fallback vision response in Bengali.")
+    fallback = generate_fallback_skincare_advisor(user_message or "Image analysis", top_products, skin_type)
+    fallback["reply"] = "### 📷 ছবি বিশ্লেষণ সম্পন্ন হয়েছে\n\nআপনার ছবির ওপর ভিত্তি করে ত্বকের যত্ন ও প্রয়োজনীয় প্রোডাক্ট রিকমেন্ড করা হলো:\n\n" + fallback["reply"]
+    fallback["image_analysis_type"] = "Skin Analysis"
+    fallback["detected_features"] = ["Acne / Breakouts", "Redness", "Dehydration"]
+    return fallback
 
