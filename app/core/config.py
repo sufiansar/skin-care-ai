@@ -21,9 +21,22 @@ class Settings(BaseSettings):
     AWS_S3_PRESIGNED_URL_EXPIRES_IN: int = 3600
     AWS_S3_PUBLIC_ACCESS: bool = False
 
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres123"
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "skincare_db"
+    DATABASE_URL: Optional[str] = None
+
     @property
     def effective_claude_api_key(self) -> str:
         return (self.CLAUDE_API_KEY or self.ANTHROPIC_API_KEY or "").strip()
+
+    @property
+    def effective_database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     class Config:
         env_file = ".env"

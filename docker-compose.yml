@@ -13,17 +13,46 @@ services:
     environment:
       - MONGODB_URL=${MONGODB_URL:-mongodb://mongo:27017}
       - MONGODB_DB_NAME=${MONGODB_DB_NAME:-skincare_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-skincare_db}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres123@postgres:5432/skincare_db}
     volumes:
       - .:/app                        # hot reload in dev
       - uploads_data:/app/uploads     # persist uploaded files
     depends_on:
       mongo:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - skincare_net
 
-  # ── MongoDB ───────────────────────────────────────────────────
+  # ── PostgreSQL Database ───────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: skincare_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+      - POSTGRES_DB=${POSTGRES_DB:-skincare_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-skincare_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - skincare_net
+
+  # ── MongoDB Database ──────────────────────────────────────────
   mongo:
     image: mongo:7.0
     container_name: skincare_mongo
@@ -60,6 +89,7 @@ services:
 
 # ── Volumes ────────────────────────────────────────────────────
 volumes:
+  postgres_data:
   mongo_data:
   uploads_data:
 
