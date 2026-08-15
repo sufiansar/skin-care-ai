@@ -106,6 +106,11 @@ MONGODB_URL=mongodb://localhost:27017
 MONGODB_DB_NAME=skincare_db
 OPENAI_API_KEY=your_openai_api_key_here
 
+# Anthropic Claude API Key Support (Optional - Tier 2 Fallback)
+ANTHROPIC_API_KEY=your_claude_api_key_here
+CLAUDE_API_KEY=your_claude_api_key_here
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
+
 # 4. Start the server
 uvicorn main:app --reload --port 8000
 ```
