@@ -1,0 +1,637 @@
+{
+	"info": {
+		"_postman_id": "a91b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+		"name": "Skincare AI E-Commerce & Voice Symptom Analyzer API",
+		"description": "Complete Postman collection for the AI-powered Skincare E-Commerce Platform with Voice Assistance, Symptom Analysis, RAG Product Recommendations & Order Management.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Root & Health",
+			"item": [
+				{
+					"name": "API Root Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Check if backend server is up and running."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Skincare Products",
+			"item": [
+				{
+					"name": "List All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								""
+							]
+						},
+						"description": "Get all skincare catalog products."
+					},
+					"response": []
+				},
+				{
+					"name": "List Products with Filters & Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/?concern=Acne&skin_type=Oily&category=Serum&search=Niacinamide",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								""
+							],
+							"query": [
+								{
+									"key": "concern",
+									"value": "Acne",
+									"description": "Filter by skin concern (e.g. Acne, Dryness, Redness)"
+								},
+								{
+									"key": "skin_type",
+									"value": "Oily",
+									"description": "Filter by skin type (e.g. Dry, Oily, Sensitive)"
+								},
+								{
+									"key": "category",
+									"value": "Serum",
+									"description": "Filter by category (e.g. Cleanser, Serum, Moisturizer)"
+								},
+								{
+									"key": "search",
+									"value": "Niacinamide",
+									"description": "Search in name, description, or ingredients"
+								}
+							]
+						},
+						"description": "Filter skincare products by concern, skin type, category, brand, or search query."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Product",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/prod_salicylic_cleanser",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"prod_salicylic_cleanser"
+							]
+						},
+						"description": "Get details of a single product by ID or slug."
+					},
+					"response": []
+				},
+				{
+					"name": "Create New Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_name\": \"Advanced Retinol Renewal Night Serum\",\n  \"brand\": \"Skincare AI Lab\",\n  \"category\": \"Serum\",\n  \"skin_types\": [\"Combination\", \"Normal\"],\n  \"targeted_concerns\": [\"Fine Lines\", \"Dark Spots\", \"Wrinkles\"],\n  \"key_ingredients\": [\"Retinol 0.5%\", \"Hyaluronic Acid\", \"Squalane\"],\n  \"price\": 28.99,\n  \"currency\": \"USD\",\n  \"rating\": 4.9,\n  \"image_url\": \"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500\",\n  \"am_pm_routine\": \"PM\",\n  \"description\": \"Powerful anti-aging serum target fine lines while keeping skin hydrated.\",\n  \"how_to_use\": \"Apply 3-4 drops at night after cleansing and before moisturizer.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								""
+							]
+						},
+						"description": "Add a new skincare product to database catalog."
+					},
+					"response": []
+				},
+				{
+					"name": "Seed Catalog Products",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/seed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"seed"
+							]
+						},
+						"description": "Populate MongoDB with default initial skincare products."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Social Proof Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/prod_salicylic_cleanser/confidence-stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"prod_salicylic_cleanser",
+								"confidence-stats"
+							]
+						},
+						"description": "Get verified customer results statistics and social proof confidence stats."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Skincare Smart Tools",
+			"item": [
+				{
+					"name": "AI Ingredient Safety & Conflict Checker",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_ids\": [\"prod_salicylic_cleanser\", \"prod_vitamin_c_serum\"],\n  \"product_names\": [\"Salicylic Acid Cleanser\", \"Vitamin C 15% Serum\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/check-safety",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"check-safety"
+							]
+						},
+						"description": "AI safety checker for active ingredient conflicts in cart or custom routines."
+					},
+					"response": []
+				},
+				{
+					"name": "AI Side-by-Side Product Comparison",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id_a\": \"prod_salicylic_cleanser\",\n  \"product_id_b\": \"prod_niacinamide_serum\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/compare",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"compare"
+							]
+						},
+						"description": "Compare 2 products side-by-side on active ingredients, skin types, and value."
+					},
+					"response": []
+				},
+				{
+					"name": "AI Weekly Routine Scheduler Grid",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_ids\": [\"prod_salicylic_cleanser\", \"prod_niacinamide_serum\", \"prod_ceramide_moisturizer\"],\n  \"skin_type\": \"Oily\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/routine-schedule",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"routine-schedule"
+							]
+						},
+						"description": "Generates a personalized Mon-Sun AM & PM skincare routine grid."
+					},
+					"response": []
+				},
+				{
+					"name": "AI Smart Routine Bundle Builder",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"prod_salicylic_cleanser\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/bundle-recommendation",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"bundle-recommendation"
+							]
+						},
+						"description": "Suggests a 3-step routine bundle with 15% discount when a base product is selected."
+					},
+					"response": []
+				},
+				{
+					"name": "AI Product Restock & Replenishment Calculator",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"prod_salicylic_cleanser\",\n  \"volume_ml\": 150.0,\n  \"usage_frequency_per_day\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/restock-calculator",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"restock-calculator"
+							]
+						},
+						"description": "Calculates volume depletion and estimates restock date with reminders."
+					},
+					"response": []
+				},
+				{
+					"name": "AI Skincare Gift Finder Quiz",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipient_skin_type\": \"Sensitive\",\n  \"budget_max\": 60.0,\n  \"occasion\": \"Birthday\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/gift-finder",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"gift-finder"
+							]
+						},
+						"description": "Generates a personalized skincare gift box based on budget and recipient skin type."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Chat & Vision Advisor",
+			"item": [
+				{
+					"name": "AI Multimodal Chat Advisor",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"আমার মুখে লাল লাল ব্রণ উঠেছে এবং ত্বক অনেক তৈলাক্ত। কি প্রোডাক্ট ব্যবহার করা ভালো হবে?\",\n  \"skin_type\": \"Oily\",\n  \"include_chart\": true,\n  \"voice_enabled\": true,\n  \"history\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello Doctor, my skin feels irritated.\"\n    },\n    {\n      \"role\": \"assistant\",\n      \"content\": \"I am your AI Skincare Advisor. Tell me more about your skin type.\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chat/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chat",
+								""
+							]
+						},
+						"description": "Multimodal Voice, Text & Vision AI symptom analysis endpoint with audio script output."
+					},
+					"response": []
+				},
+				{
+					"name": "Vision AI Image Analysis",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Analyze this photo of my face to detect skin issues.\",\n  \"image_url\": \"https://images.unsplash.com/photo-1512290900673-424a6e812d4d?w=500\",\n  \"skin_type\": \"Combination\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chat/analyze-image",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chat",
+								"analyze-image"
+							]
+						},
+						"description": "Dedicated Multimodal Vision AI endpoint for Skin Photo Analysis or Product Recognition."
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze Skin Symptoms",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"symptoms\": \"Dry flaky patches around cheeks and nose with tightness after washing\",\n  \"skin_type\": \"Dry\",\n  \"budget_max\": 50.0,\n  \"voice_enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chat/analyze-symptoms",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chat",
+								"analyze-symptoms"
+							]
+						},
+						"description": "Dedicated symptom analysis endpoint that returns matching catalog recommendations."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Skin Concern Chart Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/chat/charts/concerns",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chat",
+								"charts",
+								"concerns"
+							]
+						},
+						"description": "Get skin concern suitability distribution chart payload for dashboard."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Skincare Orders (COD)",
+			"item": [
+				{
+					"name": "Create Order - Inside Dhaka ($2.00 Delivery)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"prod_salicylic_cleanser\",\n      \"product_name\": \"Salicylic Acid Gentle Foaming Cleanser\",\n      \"brand\": \"CeraVe\",\n      \"quantity\": 2,\n      \"unit_price\": 14.99,\n      \"total_price\": 29.98\n    }\n  ],\n  \"is_inside_dhaka\": true,\n  \"customer_name\": \"Sufian Ahmed\",\n  \"customer_phone\": \"+8801700000000\",\n  \"customer_address\": \"House 12, Road 5, Dhanmondi, Dhaka\",\n  \"customer_email\": \"sufian@example.com\",\n  \"notes\": \"Please call before delivery.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								""
+							]
+						},
+						"description": "Place Cash on Delivery order inside Dhaka ($2.00 / 60 BDT delivery fee)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order - Outside Dhaka ($4.00 Delivery)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"prod_ceramide_moisturizer\",\n      \"product_name\": \"Ceramide Barrier Moisture Cream\",\n      \"brand\": \"La Roche-Posay\",\n      \"quantity\": 1,\n      \"unit_price\": 19.99,\n      \"total_price\": 19.99\n    }\n  ],\n  \"is_inside_dhaka\": false,\n  \"customer_name\": \"Karim Rahman\",\n  \"customer_phone\": \"+8801800000000\",\n  \"customer_address\": \"Station Road, Agrabad, Chittagong\",\n  \"customer_email\": \"karim@example.com\",\n  \"notes\": \"Deliver via courier service.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								""
+							]
+						},
+						"description": "Place Cash on Delivery order outside Dhaka ($4.00 / 120 BDT delivery fee)."
+					},
+					"response": []
+				},
+				{
+					"name": "List Admin Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/?status=Pending Admin Confirmation&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								""
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Pending Admin Confirmation",
+									"description": "Filter by order status"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get list of customer orders for admin review with status filter & pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Order Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/ORD-20260810-1A2B3C",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"ORD-20260810-1A2B3C"
+							]
+						},
+						"description": "Get order details by Order ID string or MongoDB ObjectId."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/ORD-20260810-1A2B3C/status?status=Confirmed by Call",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"ORD-20260810-1A2B3C",
+								"status"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Confirmed by Call",
+									"description": "New status (e.g. Confirmed by Call, Shipped, Delivered, Cancelled)"
+								}
+							]
+						},
+						"description": "Admin endpoint to update customer order status after confirmation."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
