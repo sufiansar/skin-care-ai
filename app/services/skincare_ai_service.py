@@ -109,7 +109,8 @@ async def get_rag_skincare_products(
     full_context_text = user_message.lower()
     if history and isinstance(history, list):
         for h in history:
-            full_context_text += " " + str(h.get("message", "")).lower() + " " + str(h.get("reply", "")).lower()
+            if isinstance(h, dict):
+                full_context_text += " " + str(h.get("content") or h.get("message") or "").lower() + " " + str(h.get("reply") or "").lower()
     
     # Comprehensive skincare concern mapping with exhaustive English, Banglish & Native Bangla keywords
     symptom_keywords = {
@@ -195,7 +196,8 @@ def generate_fallback_skincare_advisor(
     full_context_text = msg_lower
     if history and isinstance(history, list):
         for h in history:
-            full_context_text += " " + str(h.get("message", "")).lower() + " " + str(h.get("reply", "")).lower()
+            if isinstance(h, dict):
+                full_context_text += " " + str(h.get("content") or h.get("message") or "").lower() + " " + str(h.get("reply") or "").lower()
 
     top_products = products[:3]
     is_non_routine_intent = False
