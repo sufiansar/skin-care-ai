@@ -81,6 +81,7 @@ Rules:
 async def get_rag_skincare_products(
     user_message: str,
     skin_type: Optional[str] = None,
+    history: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """
     RAG Keyword & Symptom Relevance Search:
@@ -104,8 +105,11 @@ async def get_rag_skincare_products(
         if "_id" in p:
             p["_id"] = str(p["_id"])
 
-    # Extract keywords from user message
-    msg_lower = user_message.lower()
+    # Build combined full context text from message + history so RAG matching NEVER loses context!
+    full_context_text = user_message.lower()
+    if history and isinstance(history, list):
+        for h in history:
+            full_context_text += " " + str(h.get("message", "")).lower() + " " + str(h.get("reply", "")).lower()
     
     # Comprehensive skincare concern mapping with exhaustive English, Banglish & Native Bangla keywords
     symptom_keywords = {
@@ -266,14 +270,24 @@ def generate_fallback_skincare_advisor(
         ]
         is_non_routine_intent = True
 
-    is_answering = any(k in msg_lower for k in [
-        "1.", "2.", "3.", "1:", "2:", "3:", "1 -", "2 -", "3 -",
-        "অনুভূতি", "সময়কাল", "রুটিন", "week", "saptaho", "সপ্তাহ", "মাস", "month", "year", "দিন", "gonta", "ghonta", "ganta", "hour", "hours",
-        "na", "নাই", "না", "আছ", "ব্যবহার", "মাখি", "নাইট", "ক্রিম", "সিরাম", "খুব", "অনেক", "দিন ধরে"
-    ]) or len(msg_lower) >= 12
+    # Build combined full context text from message + conversation history so context is NEVER lost!
+    full_context_text = msg_lower
+    if history and isinstance(history, list):
+        for h in history:
+            full_context_text += " " + str(h.get("message", "")).lower() + " " + str(h.get("reply", "")).lower()
+
+    is_answering = (
+        any(k in msg_lower for k in [
+            "1.", "2.", "3.", "1:", "2:", "3:", "1 -", "2 -", "3 -",
+            "অনুভূতি", "সময়কাল", "রুটিন", "week", "saptaho", "সপ্তাহ", "মাস", "month", "year", "দিন", "gonta", "ghonta", "ganta", "hour", "hours",
+            "na", "নাই", "না", "আছ", "ব্যবহার", "মাখি", "নাইট", "ক্রিম", "সিরাম", "খুব", "অনেক", "দিন ধরে"
+        ])
+        or len(msg_lower) >= 12
+        or (history and len(history) >= 1)
+    )
 
     # 5. Skin Concern: Hyperpigmentation / Dark Circles / Eye Care
-    if any(k in msg_lower for k in ["kalo dag", "kalodag", "cokher", "chokher", "dark spot", "dark circle", "pigmentation", "mecheta", "mechota", "চোখের", "কালো দাগ", "মেচেতা", "দাগ"]):
+    if any(k in full_context_text for k in ["kalo dag", "kalodag", "cokher", "chokher", "dark spot", "dark circle", "pigmentation", "mecheta", "mechota", "চোখের", "কালো দাগ", "মেচেতা", "দাগ"]):
         if is_answering:
             concern_title = "🩺 ড. SUPRITS ক্লিনিকাল প্রেসক্রিপশন: চোখের নিচের কালো দাগ (Dark Circles Care)"
             concern_intro = (
@@ -311,7 +325,7 @@ def generate_fallback_skincare_advisor(
             ]
 
     # 6. Skin Concern: Acne / Pimples
-    elif any(k in msg_lower for k in ["acne", "bron", "brno", "pimple", "bichi", "rash", "fuskuri", "ব্রণ", "ফুসকুড়ি"]):
+    elif any(k in full_context_text for k in ["acne", "bron", "brno", "pimple", "bichi", "rash", "fuskuri", "ব্রণ", "ফুসকুড়ি"]):
         concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: ব্রণ ও অ্যাকনে চিকিৎসা"
         concern_intro = (
             "ব্রণ বা ফুসকুড়ি ত্বকের একটি অতি সাধারণ সমস্যা। সঠিক উপাদান ও নিয়মিত ডার্মাটোলজিক্যাল কেয়ারে এটি সম্পূর্ণ নিরাময় করা সম্ভব।\n\n"
@@ -332,7 +346,7 @@ def generate_fallback_skincare_advisor(
         ]
 
     # 7. Skin Concern: Dryness
-    elif any(k in msg_lower for k in ["dry", "shusko", "khaskhase", "shukno", "chamra ota", "শুষ্ক", "খসখসে", "টান টান"]):
+    elif any(k in full_context_text for k in ["dry", "shusko", "khaskhase", "shukno", "chamra ota", "শুষ্ক", "খসখসে", "টান টান"]):
         concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: শুষ্ক ত্বক ও ব্যারিয়ার ড্যামেজ"
         concern_intro = (
             "ত্বকের টান টান ভাব, চামড়া ওঠা বা খসখসে ভাব স্কিন ব্যারিয়ার (Skin Barrier) দুর্বল হওয়ার লক্ষণ।\n\n"
@@ -353,7 +367,7 @@ def generate_fallback_skincare_advisor(
         ]
 
     # 8. Skin Concern: Oily Skin & Open Pores
-    elif any(k in msg_lower for k in ["oily", "teltele", "pore", "chokchoke", "ওইলি", "তেলতেলে", "পোরস"]):
+    elif any(k in full_context_text for k in ["oily", "teltele", "pore", "chokchoke", "ওইলি", "তেলতেলে", "পোরস"]):
         concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: তৈলাক্ত ত্বক ও খোলা লোমকূপ"
         concern_intro = (
             "অতিরিক্ত সেবাম নিঃসরণ ও লোমকূপ বন্ধ হয়ে যাওয়ার কারণে ত্বক তেলতেলে দেখায় ও ওপেন পোরস তৈরি হয়।\n\n"
