@@ -24,6 +24,11 @@ SMART MULTILINGUAL RESPONSE RULE:
 3. OTHER LANGUAGES -> TARGET USER LANGUAGE:
    - If the user writes in Spanish, French, Arabic, German, etc., respond in THAT SPECIFIC USER LANGUAGE.
 
+GREETING vs PRODUCT RECOMMENDATION RULE:
+- If the user sends ONLY a simple greeting ("hi", "hello", "hey", "assalamu alaikum", etc.) WITHOUT asking any skin symptom or product question:
+  -> Do NOT generate product recommendations! Set "recommended_products": [] and "routine_steps": {"AM": [], "PM": []}.
+  -> Simply welcome the user warmly, explain that you are their SUPRITS Skincare Advisor, and ask how you can help their skin today.
+
 Your goal is to analyze the user's skin symptoms/concerns (such as acne, dryness, hyperpigmentation, redness, sensitivity, pores, or aging) and recommend exact matching skincare products from the provided CONTEXT.
 
 Always return ONLY a valid JSON object matching this exact schema:
@@ -474,6 +479,33 @@ async def process_skincare_symptom_analysis(
     - Tier 3: OpenRouter Free AI (llama-3.3-70b-instruct:free)
     - Tier 4: Local Rule-Based Skincare Advisor
     """
+    import re
+    clean_msg = re.sub(r'[^\w\s]', '', user_message.strip().lower()).strip()
+    greetings = {"hi", "hello", "hey", "hlw", "hallo", "helo", "hy", "assalamu alaikum", "salam", "namaskar", "good morning", "good evening", "কেমন আছেন", "হ্যালো", "হাই"}
+    
+    if clean_msg in greetings or (len(clean_msg.split()) <= 2 and any(g in clean_msg for g in greetings)):
+        welcome_reply = (
+            "হ্যালো! 🌸 **SUPRITS Beauty & Skincare Advisor**-এ আপনাকে স্বাগতম।\n\n"
+            "আমি আপনার এআই স্কিনকেয়ার কনসালটেন্ট। আপনার ত্বকের যেকোনো সমস্যা (যেমন: ব্রণ, শুষ্কতা, কাল দাগ বা সংবেদনশীলতা) "
+            "অথবা উপযুক্ত প্রোডাক্ট ও স্কিনকেয়ার রুটিন জানতে আমাকে বলুন।\n\n"
+            "আজ আপনার ত্বকের জন্য কীভাবে সাহায্য করতে পারি?"
+        )
+        welcome_voice = "হ্যালো! SUPRITS Beauty & Skincare Advisor-এ আপনাকে স্বাগতম। আপনার ত্বকের সমস্যা বা প্রোডাক্টের বিষয়ে কীভাবে সাহায্য করতে পারি বলুন।"
+        return {
+            "reply": welcome_reply,
+            "voice_text": welcome_voice,
+            "voice_audio_url": get_free_google_tts_url(welcome_voice) if voice_enabled else None,
+            "recommended_products": [],
+            "routine_steps": {"AM": [], "PM": []},
+            "chart": None,
+            "summary": {"primary_concern": "সাধারণ কুশলাদি", "skin_type": skin_type or "সাধারণ"},
+            "suggested_questions": [
+                "আমার ত্বকে ব্রণ হয়েছে, কি ব্যবহার করব?",
+                "শুষ্ক ত্বকের সঠিক যত্ন কীভাবে নিব?",
+                "ব্রণযুক্ত ত্বকের জন্য কোন সানস্ক্রিন সবচেয়ে ভালো?"
+            ],
+        }
+
     top_products = await get_rag_skincare_products(user_message=user_message, skin_type=skin_type)
 
     messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}]
