@@ -370,41 +370,20 @@ def generate_fallback_skincare_advisor(
             "কোন উপাদানগুলো এড়িয়ে চলব?"
         ]
 
-    # 10. General Skincare / Fallback (No specific concern matched)
+    # 10. General Greetings & Help Query (No specific skin symptom mentioned)
     else:
-        is_english = any(w in msg_lower for w in ["can you", "help", "hello", "hi", "how", "what", "please", "doctor"]) and not any('\u0980' <= c <= '\u09FF' for c in user_message)
-        if is_english:
-            concern_title = "👨‍⚕️ Dr. SUPRITS AI Dermatologist Clinic"
-            concern_intro = (
-                "Hello and welcome! I am **Dr. SUPRITS AI**, your personal AI Dermatologist & Clinical Health Specialist.\n\n"
-                "I am here to help you with any skin, hair, or body care concern (such as **acne, dark spots, dryness, hair loss, or sensitive skin**).\n\n"
-                "📋 **To provide you with accurate medical guidance, please share:**\n"
-                "1. What is your primary skin or hair concern?\n"
-                "2. What is your skin type (Oily, Dry, Combination, Sensitive)?\n"
-                "3. How long have you been experiencing this issue?"
-            )
-            voice_text = "Hello! Welcome to Dr. SUPRITS AI Clinic. How may I help you with your skin or hair care today?"
-            suggested_q = [
-                "I have acne and dark spots on my face",
-                "What cleanser is best for oily skin?",
-                "How do I order products via cash on delivery?"
-            ]
-        else:
-            concern_title = "👨‍⚕️ ড. SUPRITS AI ডার্মাটোলজিস্ট ক্লিনিক"
-            concern_intro = (
-                "আসসালামু আলাইকুম! আমি **ড. SUPRITS AI**, আপনার ব্যক্তিগত ডার্মাটোলজিক্যাল কনসালটেন্ট।\n\n"
-                "ত্বকের যেকোনো সমস্যা (যেমন: **ব্রণ, কাল দাগ, শুষ্কতা, তেলতেলে ভাব, লালচে ভাব বা সেনসিটিভিটি**) সঠিক চিকিৎসাসংক্রান্ত নিয়মে সমাধান করতে আমি আপনাকে সাহায্য করব।\n\n"
-                "📋 **সঠিক চিকিৎসার পরামর্শের জন্য আপনার লক্ষণগুলো শেয়ার করুন:**\n"
-                "১. আপনার ত্বকের প্রধান সমস্যাটি কি?\n"
-                "২. আপনার ত্বকের ধরণ কি (তৈলাক্ত, শুষ্ক, মিশ্র নাকি সংবেদনশীল)?\n"
-                "৩. সমস্যাটি কতদিন ধরে অনুভব করছেন?"
-            )
-            voice_text = "আসসালামু আলাইকুম! আমি ডক্টর সুপ্রিটস। আপনার ত্বকের যেকোনো সমস্যা বা লক্ষণের কথা আমাকে জানাতে পারেন।"
-            suggested_q = [
-                "আমার মুখে ব্রণ ও কালো দাগ আছে",
-                "আমার ত্বক খুব শুষ্ক ও খসখসে",
-                "কীভাবে সঠিক প্রোডাক্ট অর্ডার করব?"
-            ]
+        concern_title = "👨‍⚕️ ড. SUPRITS AI ডার্মাটোলজিস্ট ক্লিনিক"
+        concern_intro = (
+            "আসসালামু আলাইকুম! জি অবশ্যই, আমি আপনার ব্যক্তিগত **AI ডার্মাটোলজিস্ট ও স্কিনকেয়ার বিশেষজ্ঞ**।\n\n"
+            "আপনার ত্বক, চুল, স্ক্যাল্প বা পার্সোনাল কেয়ার সংক্রান্ত যেকোনো সমস্যা (যেমন: **ব্রণ, কাল দাগ, শুষ্কতা, চুল পড়া বা সেনসিটিভিটি**) এবং উপযুক্ত প্রোডাক্ট বা রুটিন নিয়ে আমি আপনাকে সাহায্য করতে পারি।\n\n"
+            "বলুন, আপনার ত্বক বা চুলের কী বিষয়ে সাহায্য প্রয়োজন?"
+        )
+        voice_text = "আসসালামু আলাইকুম! আমি ডক্টর সুপ্রিটস। আপনার ত্বক বা চুলের কী বিষয়ে সাহায্য প্রয়োজন বলুন।"
+        suggested_q = [
+            "আমার মুখে ব্রণ ও কালো দাগের সমস্যা রয়েছে",
+            "আমার অতিরিক্ত চুল পড়ছে, কি ব্যবহার করব?",
+            "কীভাবে সঠিক প্রোডাক্ট অর্ডার করব?"
+        ]
 
     rec_list = []
     labels = []
