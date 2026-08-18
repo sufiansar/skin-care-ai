@@ -711,12 +711,56 @@ async def process_skincare_symptom_analysis(
         c_addr = details["customer_address"] or "ঢাকা"
         c_product = details["product_name"] or (top_products[0].get("product_name") if top_products else "COSRX Low pH Good Morning Gel Cleanser")
         
-        is_dhaka = any(k in c_addr.lower() for k in ["dhaka", "ঢাকা", "bonosree", "dhanmondi", "gulshan", "banani", "mirpur", "uttara", "mohammadpur", "d-block"])
-        delivery_fee = 2.00 if is_dhaka else 4.00
-        delivery_bdt = "৳৬০" if is_dhaka else "৳১২০"
-        location_type = "ঢাকার ভেতরে" if is_dhaka else "ঢাকার বাইরে"
+        dhaka_keywords = [
+            "dhaka", "ঢাকা", "badda", "বাড্ডা", "rampura", "রামপুরা", "gulshan", "গুলশান", "banani", "বনানী",
+            "mirpur", "মিরপুর", "uttara", "উত্তরা", "mohammadpur", "মোহাম্মদপুর", "khilgaon", "খিলগাঁও",
+            "tejgaon", "তেজগাঁও", "jatrabari", "যাত্রাবাড়ী", "motijheel", "মতিঝিল", "farmgate", "ফার্মগেট",
+            "moghbazar", "মগবাজার", "malibagh", "মালিবাগ", "segunbagicha", "সেগুনবাগিচা", "paltan", "পল্টন",
+            "shahbagh", "শাহবাগ", "ramna", "রমনা", "new market", "নিউ মার্কেট", "azimpur", "আজিমপুর",
+            "lalbagh", "লালবাগ", "hazaribagh", "হাজারীবাগ", "kamrangirchar", "কামরাঙ্গীরচর", "bangshal", "বংশাল",
+            "kotwali", "কতোয়ালী", "sutrapur", "সূত্রাপুর", "wari", "ওয়ারী", "gendaria", "গেন্ডারিয়া",
+            "demra", "ডেমরা", "kadamtali", "কদমতলী", "shyampur", "শ্যামপুর", "bimanbandar", "বিমানবন্দর",
+            "cantonment", "ক্যান্টনমেন্ট", "kafrul", "কাফরুল", "khilkhet", "খিলক্ষেত", "turag", "তুরাগ",
+            "vatara", "ভাটারা", "bhashantek", "ভাষানটেক", "darus salam", "দারুস সালাম", "rupnagar", "রূপনগর",
+            "shah ali", "শাহ আলী", "adabor", "আদাবর", "sher-e-bangla nagar", "শের-ই-বাংলা নগর", "savar", "সাভার",
+            "dhamrai", "ধামরাই", "keraniganj", "কেরানীগঞ্জ", "nawabganj", "নবাবগঞ্জ", "dohar", "দোহার",
+            "link road", "লিঙ্ক রোড", "bonosree", "বনশ্রী", "bashundhara", "বসুন্ধরা", "nikunja", "নিকুঞ্জ",
+            "shyamoli", "শ্যামলী", "kalyanpur", "কল্যাণপুর", "agargaon", "আগারগাঁও", "shewrapara", "শেওড়াপাড়া",
+            "kazipara", "কাজীপূড়া", "elephant road", "এলিফ্যান্ট রোড", "green road", "গ্রীন রোড", "baily road", "বেইলি রোড"
+        ]
+        is_dhaka = any(k in c_addr.lower() for k in dhaka_keywords)
 
         db = get_db()
+        shipping_cost = None
+        if db is not None:
+            try:
+                cfg = await db["delivery_config"].find_one({
+                    "$or": [
+                        {"is_inside_dhaka": is_dhaka},
+                        {"isInsideDhaka": is_dhaka},
+                        {"type": "INSIDE_DHAKA" if is_dhaka else "OUTSIDE_DHAKA"}
+                    ]
+                })
+                if not cfg:
+                    cfg = await db["deliveryConfig"].find_one({
+                        "$or": [
+                            {"is_inside_dhaka": is_dhaka},
+                            {"isInsideDhaka": is_dhaka}
+                        ]
+                    })
+                if cfg:
+                    raw_val = cfg.get("shipping_cost") or cfg.get("shippingCost") or cfg.get("charge") or cfg.get("fee")
+                    if raw_val is not None:
+                        shipping_cost = float(raw_val)
+            except Exception as e:
+                logger.warning(f"Error loading dynamic delivery_config from DB: {e}")
+
+        if shipping_cost is None:
+            shipping_cost = 60.0 if is_dhaka else 120.0
+
+        delivery_bdt = f"৳{int(shipping_cost):,}"
+        location_type = "ঢাকার ভেতরে" if is_dhaka else "ঢাকার বাইরে"
+
         if db is not None:
             order_doc = {
                 "order_id": order_id,
@@ -724,7 +768,7 @@ async def process_skincare_symptom_analysis(
                 "customer_phone": c_phone,
                 "customer_address": c_addr,
                 "product_name": c_product,
-                "delivery_fee": delivery_fee,
+                "delivery_fee": shipping_cost,
                 "location_type": location_type,
                 "status": "Pending Admin Confirmation",
                 "created_at": datetime.utcnow(),
@@ -735,7 +779,7 @@ async def process_skincare_symptom_analysis(
                 logger.error(f"Error auto-inserting order into MongoDB: {e}")
 
         prod_price_bdt = 1200
-        total_payable = prod_price_bdt + (50 if is_dhaka else 130)
+        total_payable = prod_price_bdt + shipping_cost
 
         order_reply = (
             f"### 🎉 ক্যাশ অন ডেলিভারি (COD) অর্ডার গ্রহণ করা হয়েছে!\n\n"
