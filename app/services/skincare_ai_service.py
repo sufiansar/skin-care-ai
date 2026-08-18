@@ -265,7 +265,11 @@ def generate_fallback_skincare_advisor(
         ]
         is_non_routine_intent = True
 
-    is_answering = any(k in msg_lower for k in ["1.", "2.", "3.", "1:", "2:", "3:", "1 -", "2 -", "3 -", "অনুভূতি", "সময়কাল", "রুটিন", "week", "সপ্তাহ", "মাস", "month", "year", "দিন", "na", "নাই", "না"]) or len(msg_lower) > 35
+    is_answering = any(k in msg_lower for k in [
+        "1.", "2.", "3.", "1:", "2:", "3:", "1 -", "2 -", "3 -",
+        "অনুভূতি", "সময়কাল", "রুটিন", "week", "saptaho", "সপ্তাহ", "মাস", "month", "year", "দিন", "gonta", "ghonta", "ganta", "hour", "hours",
+        "na", "নাই", "না", "আছ", "ব্যবহার", "মাখি", "নাইট", "ক্রিম", "সিরাম", "খুব", "অনেক", "দিন ধরে"
+    ]) or len(msg_lower) >= 12
 
     # 5. Skin Concern: Hyperpigmentation / Dark Circles / Eye Care
     if any(k in msg_lower for k in ["kalo dag", "kalodag", "cokher", "chokher", "dark spot", "dark circle", "pigmentation", "mecheta", "mechota", "চোখের", "কালো দাগ", "মেচেতা", "দাগ"]):
