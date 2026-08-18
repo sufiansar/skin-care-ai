@@ -255,7 +255,7 @@ def generate_fallback_skincare_advisor(
         is_non_routine_intent = True
 
     # 4. Contact & Support Intent
-    elif any(k in msg_lower for k in ["contact", "number", "phone", "support", "location", "address", "thikana", "ঠিকানা", "যোগাযোগ", "ফোন", "নম্বর"]):
+    elif any(k in msg_lower for k in ["contact us", "helpdesk", "office address", "suprits address", "office location", "যোগাযোগের ঠিকানা", "হেল্পলাইন"]):
         concern_title = "📞 SUPRITS কাস্টমার সাপোর্ট ও যোগাযোগ"
         concern_intro = (
             "আমাদের সাথে সরাসরি যোগাযোগের মাধ্যমসমূহ:\n\n"
@@ -672,6 +672,71 @@ async def process_skincare_symptom_analysis(
 
     top_products = await get_rag_skincare_products(user_message=user_message, skin_type=skin_type)
 
+    # Check if user message contains order placement details (Phone + Name/Address/Product)
+    details = extract_customer_details(user_message)
+    if details["customer_phone"]:
+        import uuid
+        from datetime import datetime
+        order_id = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        
+        c_name = details["customer_name"] or "সম্মানিত গ্রাহক"
+        c_phone = details["customer_phone"]
+        c_addr = details["customer_address"] or "ঢাকা"
+        c_product = details["product_name"] or (top_products[0].get("product_name") if top_products else "COSRX Low pH Good Morning Gel Cleanser")
+        
+        is_dhaka = any(k in c_addr.lower() for k in ["dhaka", "ঢাকা", "bonosree", "dhanmondi", "gulshan", "banani", "mirpur", "uttara", "mohammadpur", "d-block"])
+        delivery_fee = 2.00 if is_dhaka else 4.00
+        delivery_bdt = "৳৬০" if is_dhaka else "৳১২০"
+        location_type = "ঢাকার ভেতরে" if is_dhaka else "ঢাকার বাইরে"
+
+        db = get_db()
+        if db is not None:
+            order_doc = {
+                "order_id": order_id,
+                "customer_name": c_name,
+                "customer_phone": c_phone,
+                "customer_address": c_addr,
+                "product_name": c_product,
+                "delivery_fee": delivery_fee,
+                "location_type": location_type,
+                "status": "Pending Admin Confirmation",
+                "created_at": datetime.utcnow(),
+            }
+            try:
+                await db["orders"].insert_one(order_doc)
+            except Exception as e:
+                logger.error(f"Error auto-inserting order into MongoDB: {e}")
+
+        order_reply = (
+            f"### 🎉 ক্যাশ অন ডেলিভারি (COD) অর্ডার গ্রহণ করা হয়েছে!\n\n"
+            f"ধন্যবাদ **{c_name}**! আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে।\n\n"
+            f"#### 📦 অর্ডারের বিবরণ:\n"
+            f"- **অর্ডার আইডি**: `{order_id}`\n"
+            f"- **প্রোডাক্ট**: **{c_product}**\n"
+            f"- **গ্রাহকের নাম**: {c_name}\n"
+            f"- **ফোন নম্বর**: `{c_phone}`\n"
+            f"- **ডেলিভারি ঠিকানা**: {c_addr} ({location_type})\n"
+            f"- **ডেলিভারি চার্জ**: {delivery_bdt} (${delivery_fee})\n"
+            f"- **পেমেন্ট মেথড**: ক্যাশ অন ডেলিভারি (COD)\n\n"
+            f"📞 **পরবর্তী ধাপ**: আমাদের কাস্টমার সাপোর্ট প্রতিনিধি খুব শীঘ্রই **{c_phone}** নম্বরে কল দিয়ে আপনার অর্ডারটি নিশ্চিত করবেন!"
+        )
+        order_voice = f"ধন্যবাদ {c_name}! আপনার {c_product} প্রোডাক্টের ক্যাশ অন ডেলিভারি অর্ডারটি সফলভাবে নেওয়া হয়েছে।"
+
+        return {
+            "reply": order_reply,
+            "voice_text": order_voice,
+            "voice_audio_url": get_free_google_tts_url(order_voice) if voice_enabled else None,
+            "recommended_products": [],
+            "routine_steps": {"AM": [], "PM": []},
+            "chart": None,
+            "summary": {"primary_concern": "ক্যাশ অন ডেলিভারি অর্ডার", "order_id": order_id},
+            "suggested_questions": [
+                "ঢাকার ভেতরে ডেলিভারি হতে কতদিন সময় লাগবে?",
+                "অর্ডার করার পর ট্র্যাকিং বিবরণ কীভাবে পাব?",
+                "ডেলিভারির সময় প্রোডাক্ট চেক করে নেওয়ার সুযোগ আছে কি?"
+            ]
+        }
+
     messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     if history:
@@ -1053,11 +1118,12 @@ async def get_product_confidence_stats(product_id: str) -> Dict[str, Any]:
 import re
 
 def extract_customer_details(text: str) -> Dict[str, Optional[str]]:
-    """Extracts customer Name, Phone, Address, and Email from chat text message."""
+    """Extracts customer Name, Phone, Address, Product, and Email from chat text message."""
     name = None
     phone = None
     address = None
     email = None
+    product_name = None
 
     # Phone Regex (Bangladeshi / international formats e.g. 01712345678, +88017...)
     phone_match = re.search(r"(?:\+88)?01[3-9]\d{8}", text)
@@ -1069,23 +1135,28 @@ def extract_customer_details(text: str) -> Dict[str, Optional[str]]:
     if email_match:
         email = email_match.group(0)
 
-    # Name Regex (Name: John Doe or Name - John Doe)
-    name_match = re.search(r"(?:name|نام)\s*[:\-]\s*([^\n,]+)", text, re.IGNORECASE)
+    # Name Regex (Name: Md. Abusufian or name - Md. Abusufian)
+    name_match = re.search(r"(?:name|নাম|গ্রাহক)\s*[:\-]?\s*([^\n,:]+)", text, re.IGNORECASE)
     if name_match:
         name = name_match.group(1).strip()
 
-    # Address Regex (Address: House 12, Road 5... or Address - ...)
-    addr_match = re.search(r"(?:address|ঠিকানা|location)\s*[:\-]\s*([^\n]+)", text, re.IGNORECASE)
+    # Product Regex (product: COSRX... or product - ...)
+    product_match = re.search(r"(?:product|প্রোডাক্ট|item)\s*[:\-]?\s*([^\n,:]+)", text, re.IGNORECASE)
+    if product_match:
+        product_name = product_match.group(1).strip()
+
+    # Address Regex (Address: House 12... or location - ...)
+    addr_match = re.search(r"(?:address|ঠিকানা|location)\s*[:\-]?\s*([^\n,:]+)", text, re.IGNORECASE)
     if addr_match:
         address = addr_match.group(1).strip()
 
-    # Fallback address matching if lines contain Dhaka / Chittagong / Road / House
+    # Fallback address matching if text contains Dhaka / Bonosree / Block / Road / House
     if not address:
-        lines = text.split("\n")
-        for line in lines:
-            line_str = line.strip()
-            if any(k in line_str.lower() for k in ["house", "road", "block", "dhaka", "chittagong", "sylhet", "rajshahi", "khulna", "barisal", "rangpur", "thana", "flat"]):
-                address = line_str
+        parts = text.split(",")
+        for p in parts:
+            p_str = p.strip()
+            if any(k in p_str.lower() for k in ["dhaka", "chittagong", "sylhet", "rajshahi", "khulna", "bonosree", "block", "road", "house", "thana", "d-block"]):
+                address = p_str
                 break
 
     return {
@@ -1093,6 +1164,7 @@ def extract_customer_details(text: str) -> Dict[str, Optional[str]]:
         "customer_phone": phone,
         "customer_address": address,
         "customer_email": email,
+        "product_name": product_name,
     }
 
 
