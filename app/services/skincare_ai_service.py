@@ -12,74 +12,67 @@ logger = logging.getLogger(__name__)
 # Modern vibrant color palette for skincare visual charts
 SKINCARE_COLORS = ["#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#3B82F6", "#06B6D4"]
 
-SYSTEM_PROMPT = """You are Skincare AI Advisor, an expert AI Dermatological consultant and Skincare E-Commerce specialist.
+SYSTEM_PROMPT = """You are Dr. SUPRITS AI Dermatologist & Body Health Specialist, a compassionate, highly experienced, professional Human Doctor specializing in Skincare, Hair & Scalp Health (Trichology), Eye & Lip Care, Body Care, and Mom & Baby Wellness.
+
+FULL SPECTRUM PERSONAL CARE SCOPE:
+Your clinical expertise covers every personal care concern for the human body from head to toe:
+1. Facial Skincare: Acne, Dark Spots, Hyperpigmentation, Dryness, Oily T-Zone, Open Pores, Redness, Anti-Aging, Sun Protection.
+2. Hair & Scalp Health (Trichology): Hair Fall/Loss, Dandruff, Oily/Dry Scalp, Damaged Hair Strands, Hair Growth, Scalp Therapy.
+3. Eye & Lip Care: Dark Circles, Under-eye Puffiness, Fine Lines, Dry/Chapped Lips, Lip Pigmentation.
+4. Body & Hand Care: Body Dryness, Body Acne, Keratosis Pilaris, Hand & Foot Care, Body Scrubs & Lotions.
+5. Mom & Baby Wellness: Gentle Baby Rash Care, Sensitive Baby Skin, Stretch Mark Therapy, Postpartum Skincare.
+
+CRITICAL HUMAN DERMATOLOGIST CONSULTATION PROTOCOL:
+1. ACT LIKE A REAL HUMAN DOCTOR:
+   - Treat the user as a real patient in a clinical consultation.
+   - Speak in a warm, professional, respectful, empathetic, and reassuring tone (like an attentive doctor talking to a patient).
+   - NEVER act like a pushy salesman or immediately force/suggest product recommendations without understanding the patient's symptoms first.
+
+2. DIAGNOSTIC CLINICAL HISTORY TAKING (ইতিহাস সংগ্রহ ও প্রশ্নাবলী):
+   - When a patient presents any skin, hair, body, or baby care issue, FIRST listen carefully, express clinical empathy, and ask 2 to 3 targeted diagnostic questions to understand the root cause before rushing to suggest products:
+     a) Condition & Symptoms: "সমস্যাটি কি মুখে, চুলে/স্ক্যাল্পে নাকি শরীরে? কী ধরনের অনুভূতি হচ্ছে (যেমন: চুলকানি, শুষ্কতা, লালচে ভাব বা খসখসে)?"
+     b) Duration & Trigger: "সমস্যাটি কতদিন ধরে হচ্ছে? কোনো নতুন শ্যাম্পু, কেমিক্যাল বা লোশন ব্যবহারের পর শুরু হয়েছে কি?"
+     c) Current Routine & Lifestyle: "বর্তমানে আপনি কী ধরনের ফেসওয়াশ, শ্যাম্পু বা তেল ব্যবহার করছেন?"
+
+3. EXPERT MEDICAL CARE & LIFESTYLE ADVICE:
+   - Provide genuine medical care advice (e.g. হাইড্রেশন, সঠিক পুষ্টি, মানসিক চাপ কমানো, হালকা জেন্টল ওয়াশ ব্যবহার, হাত দিয়ে ঘা/ব্রণ/স্ক্যাল্প না চুলকানো).
+
+4. WHEN TO RECOMMEND PRODUCTS:
+   - ONLY include items in "recommended_products" when the user explicitly asks for product recommendations/purchasing OR has provided clear details about their condition.
+   - If the user is in the initial consultation stage, set "recommended_products": [] and focus entirely on diagnosis, care guidance, and diagnostic questions.
 
 SMART MULTILINGUAL RESPONSE RULE:
 1. DEFAULT LANGUAGE & BANGLISH -> BENGALI (বাংলা):
-   - If the user writes in BENGALI (বাংলা) or BANGLISH (Bengali phonetically written in English letters e.g. "amr pimple hoise", "mukh dry lagtese", "bhalo cleanser kon ta", "kibhabe use korbo") OR sends simple greetings ("hi", "hello", "hey", "assalamu alaikum"):
+   - If the user writes in BENGALI (বাংলা) or BANGLISH (Bengali phonetically written in English e.g. "amr pimple hoise", "mukh dry lagtese") OR sends simple greetings ("hi", "hello", "assalamu alaikum"):
      -> You MUST ALWAYS respond in warm, natural, polite, and elegant BENGALI (বাংলা ভাষায়).
 2. ENGLISH QUERY -> ENGLISH:
-   - If the user asks a full question/query in ENGLISH (e.g. "Recommend a cleanser for sensitive skin", "How do I treat hyperpigmentation?"):
-     -> Respond in clear, professional ENGLISH.
-3. OTHER LANGUAGES -> TARGET USER LANGUAGE:
-   - If the user writes in Spanish, French, Arabic, German, etc., respond in THAT SPECIFIC USER LANGUAGE.
-
-GREETING vs PRODUCT RECOMMENDATION RULE:
-- If the user sends ONLY a simple greeting ("hi", "hello", "hey", "assalamu alaikum", etc.) WITHOUT asking any skin symptom or product question:
-  -> Do NOT generate product recommendations! Set "recommended_products": [] and "routine_steps": {"AM": [], "PM": []}.
-  -> Simply welcome the user warmly, explain that you are their SUPRITS Skincare Advisor, and ask how you can help their skin today.
-
-Your goal is to analyze the user's skin symptoms/concerns (such as acne, dryness, hyperpigmentation, redness, sensitivity, pores, or aging) and recommend exact matching skincare products from the provided CONTEXT.
+   - If the user asks in full English, respond in clear professional English.
 
 Always return ONLY a valid JSON object matching this exact schema:
 {
-  "reply": "Clear, encouraging, markdown-formatted response explaining the user's skin symptoms, targeted active ingredients, and recommended products in the target language (defaulting to Bengali for greetings, Bangla & Banglish).",
-  "voice_text": "A warm, natural 2-3 sentence conversational voice summary matching the target response language, suitable for Web Speech API Text-to-Speech playback.",
-  "recommended_products": [
-    {
-      "product_name": "Product Name",
-      "brand": "Brand",
-      "category": "Category",
-      "price": 15.0,
-      "rating": 4.8,
-      "image_url": "url",
-      "am_pm_routine": "Both",
-      "match_score": 95,
-      "suitability_reason": "Suitability reason in the target language."
-    }
-  ],
+  "reply": "Empathetic clinical response from Dr. SUPRITS AI Dermatologist formatted in clean Markdown with clear headings, clinical assessment, diagnostic questions, and lifestyle care tips.",
+  "voice_text": "A warm, reassuring doctor summary in 2-3 spoken sentences for Text-to-Speech playback.",
+  "recommended_products": [],
   "routine_steps": {
-    "AM": ["1. Cleanser", "2. Serum", "3. Moisturizer", "4. Sunscreen SPF 50"],
-    "PM": ["1. Cleanser", "2. BHA / Active Treatment", "3. Night Cream"]
-  },
-  "chart": {
-    "type": "bar",
-    "title": "Skin Concern Suitability Match (%)",
-    "labels": ["Product 1", "Product 2", "Product 3"],
-    "datasets": [
-      {
-        "label": "Match Percentage",
-        "data": [95, 90, 85],
-        "backgroundColor": ["#10B981", "#8B5CF6", "#F59E0B"]
-      }
-    ]
+    "AM": ["1. Gentle Cleanser", "2. Hydrating Serum", "3. Sunscreen SPF 50"],
+    "PM": ["1. Gentle Cleanser", "2. Active Treatment", "3. Moisturizer"]
   },
   "summary": {
-    "primary_concern": "Acne & Dark Spots",
-    "skin_type": "Oily",
+    "primary_concern": "Acne & Inflammation",
+    "skin_type": "Combination",
     "key_active_ingredients": ["Salicylic Acid", "Niacinamide"]
   },
   "suggested_questions": [
-    "Suggested question 1 in target language",
-    "Suggested question 2 in target language",
-    "Suggested question 3 in target language"
+    "আমার ত্বকের ধরণ অনুযায়ী কোন ফেসওয়াশ উপযোগী?",
+    "ব্রণের দাগ দ্রুত দূর করার উপায় কি?",
+    "মেচেতা বা কালো দাগের ক্ষেত্রে সানস্ক্রিন কতটা জরুরি?"
   ]
 }
 
 Rules:
-1. "reply" MUST be formatted in clean Markdown with clear headings and bullet points in the target language determined by Smart Multilingual Response Rule.
-2. "voice_text" MUST be short, friendly spoken text matching the target language (plain text, no markdown).
-3. Do NOT fabricate products not present in the CONTEXT.
+1. "reply" MUST be formatted in clean Markdown without raw # symbols, using bold text, emojis, and clear diagnostic questions.
+2. "voice_text" MUST be spoken friendly doctor advice (plain text, no markdown).
+3. Do NOT fabricate products not present in CONTEXT.
 4. Return ONLY raw JSON without markdown code block wrappers.
 """
 
@@ -274,93 +267,130 @@ def generate_fallback_skincare_advisor(
 
     # 5. Skin Concern: Hyperpigmentation / Dark Spots
     elif any(k in msg_lower for k in ["kalo dag", "kalodag", "cokher", "chokher", "dark spot", "dark circle", "pigmentation", "mecheta", "mechota", "চোখের", "কালো দাগ", "মেচেতা", "দাগ"]):
-        concern_title = "👁️ চোখের নিচের কালো দাগ ও স্কিন পিগমেন্টেশনের কাস্টম সমাধান"
-        concern_intro = "চোখের নিচের কালচে ভাব (Dark Circles) ও ত্বকের কালচে ছোপ দূর করার জন্য কার্যকরী উপাদান (যেমন Niacinamide, Vitamin C) সমৃদ্ধ প্রোডাক্টসমূহ:"
-        voice_text = "চোখের নিচের কালো দাগ ও কালচে ছোপ দূর করতে নিয়াসিনামাইড ও ভিটামিন সি সিরাম ব্যবহারের পরামর্শ দেওয়া হচ্ছে।"
+        concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: কালচে ছোপ ও পিগমেন্টেশন"
+        concern_intro = (
+            "ত্বকের কালচে দাগ, মেচেতা বা চোখের নিচের কালচে ভাব (Dark Circles) সঠিক নিয়মে যত্ন নিলে দূর করা সম্ভব।\n\n"
+            "💡 **চিকিৎসাসংক্রান্ত প্রাথমিক লাইফস্টাইল পরামর্শ:**\n"
+            "- দিনের বেলা বাইরে বের হওয়ার ৩০ মিনিট আগে নিয়মিত সানস্ক্রিন (SPF 50) ব্যবহার করুন।\n"
+            "- ত্বকে ক্ষতিকর ব্লিচিং বা ফর্সাকারী কেমিক্যালযুক্ত ক্রিম মাখা থেকে বিরত থাকুন।\n"
+            "- পর্যাপ্ত পানি ও ভিটামিন-সি সমৃদ্ধ খাবার গ্রহণ করুন।\n\n"
+            "📋 **সঠিক চিকিৎসার জন্য ডাক্তার হিসেবে আপনার কাছে ৩টি জরুরি প্রশ্ন:**\n"
+            "১. কালচে দাগগুলো কি মেচেতার মতো গালে ছড়ানো, নাকি ব্রণ হওয়ার পর তৈরি হওয়া দাগ?\n"
+            "২. আপনার ত্বক কি রোদে গেলে লাল হয়ে যায় বা জ্বালাপোড়া করে?\n"
+            "৩. বর্তমানে আপনি কি কোনো নাইট ক্রিম বা ময়েশ্চারাইজার ব্যবহার করছেন?"
+        )
+        voice_text = "আমি ডক্টর সুপ্রিটস। কালচে দাগ দূর করতে প্রতিদিন সানস্ক্রিন ব্যবহার আবশ্যক। সঠিক উপাদানের জন্য আপনার দাগের ধরন জানান।"
         suggested_q = [
-            "চোখের নিচের কালো দাগ কতদিনে দূর হবে?",
-            "ভিটামিন সি সিরাম কীভাবে চোখে ব্যবহার করব?",
-            "কাল দাগের জন্য সানস্ক্রিন কতটা প্রয়োজনীয়?"
+            "ব্রণের কারণে কালো দাগ তৈরি হয়েছে",
+            "মেচেতার কালো দাগ দূর করার উপায় কি?",
+            "সানস্ক্রিন দিনে কতবার ব্যবহার করব?"
         ]
 
     # 6. Skin Concern: Acne / Pimples
     elif any(k in msg_lower for k in ["acne", "bron", "brno", "pimple", "bichi", "rash", "fuskuri", "ব্রণ", "ফুসকুড়ি"]):
-        concern_title = "🧪 ব্রণ ও অ্যাকনে দূর করার বিশেষ ডার্মাটোলজিক্যাল সমাধান"
-        concern_intro = "ব্রণ, ফুসকুড়ি ও ক্লগড পোরস পরিষ্কার করার জন্য কার্যকরী Salicylic Acid (BHA) ও Tea Tree সমৃদ্ধ সেরা প্রোডাক্টসমূহ:"
-        voice_text = "ব্রণ ও ফুসকুড়ি নিয়ন্ত্রণের জন্য স্যালিসিলিক এসিড জেন্টল ফেসওয়াশ ও ব্রাইটেনিং সিরাম ব্যবহারের পরামর্শ দেওয়া হচ্ছে।"
+        concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: ব্রণ ও অ্যাকনে চিকিৎসা"
+        concern_intro = (
+            "ব্রণ বা ফুসকুড়ি ত্বকের একটি অতি সাধারণ সমস্যা। সঠিক উপাদান ও নিয়মিত ডার্মাটোলজিক্যাল কেয়ারে এটি সম্পূর্ণ নিরাময় করা সম্ভব।\n\n"
+            "💡 **চিকিৎসাসংক্রান্ত প্রাথমিক লাইফস্টাইল পরামর্শ:**\n"
+            "- দিনে ২ বারের বেশি মুখ ধোবেন না এবং তোয়ালে দিয়ে জোরে না ঘষে হালকা প্যাট করে শুকাবেন।\n"
+            "- কখনোই হাত দিয়ে ব্রণ খোঁচাবেন না, এতে জীবাণু ছড়িয়ে পড়ে কালো দাগ ও গর্ত হতে পারে।\n"
+            "- রোদ এড়িয়ে চলুন এবং দিনের বেলা হালকা নন-কমেডোজেনিক সানস্ক্রিন মাখুন।\n\n"
+            "📋 **সঠিক চিকিৎসার জন্য আপনার কাছে ৩টি জরুরি প্রশ্ন:**\n"
+            "১. আপনার ত্বক কি অতিমাত্রায় তৈলাক্ত (Oily), নাকি মুখ ধোয়ার পর টান টান শুষ্ক (Dry) মনে হয়?\n"
+            "২. ব্রণগুলো কি লালচে ও ব্যথাদায়ক, নাকি কেবল ছোট ছোট ফুসকুড়ি বা ব্ল্যাকহেডস?\n"
+            "৩. বর্তমানে কি আপনি কোনো সাবান, ফেসওয়াশ বা কেমিক্যাল ক্রিম ব্যবহার করছেন?"
+        )
+        voice_text = "আমি ডক্টর সুপ্রিটস। ব্রণ নিরাময়ে মুখ দিনে দুইবার ধোবেন এবং হাত দিয়ে ব্রণ খোঁচাবেন না। সঠিক পরামর্শের জন্য আপনার ত্বকের ধরণ জানান।"
         suggested_q = [
-            "ব্রণ দূর হতে কতদিন সময় লাগবে?",
+            "আমার ত্বক তৈলাক্ত ও সেনসিটিভ",
             "ব্রণের দাগ দূর করার উপায় কি?",
-            "তৈলাক্ত ত্বকের জন্য কোন ফেসওয়াশ ভালো?"
+            "কোন ফেসওয়াশ আমার জন্য ভালো হবে?"
         ]
 
     # 7. Skin Concern: Dryness
     elif any(k in msg_lower for k in ["dry", "shusko", "khaskhase", "shukno", "chamra ota", "শুষ্ক", "খসখসে", "টান টান"]):
-        concern_title = "💧 শুষ্ক ত্বকের ডিপ হাইড্রেশন ও ময়েশ্চারাইজিং রুটিন"
-        concern_intro = "ত্বকের খসখসে ভাব ও শুষ্কতা দূর করে ত্বককে নরম ও হাইড্রেটেড রাখার জন্য বিশেষ প্রোডাক্টসমূহ:"
-        voice_text = "শুষ্ক ত্বকের ডিপ হাইড্রেশনের জন্য সেরামাইড ময়েশ্চারাইজার ও হাইয়ালুরোনিক এসিড ব্যবহারের পরামর্শ দেওয়া হচ্ছে।"
+        concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: শুষ্ক ত্বক ও ব্যারিয়ার ড্যামেজ"
+        concern_intro = (
+            "ত্বকের টান টান ভাব, চামড়া ওঠা বা খসখসে ভাব স্কিন ব্যারিয়ার (Skin Barrier) দুর্বল হওয়ার লক্ষণ।\n\n"
+            "💡 **চিকিৎসাসংক্রান্ত প্রাথমিক লাইফস্টাইল পরামর্শ:**\n"
+            "- মুখ ধোয়ার জন্য গরম পানি ব্যবহার করবেন না, কুসুম গরম বা স্বাভাবিক পানি ব্যবহার করুন।\n"
+            "- মুখ ধোয়ার সাথে সাথে ত্বক সামান্য ভেজা থাকা অবস্থায় ময়েশ্চারাইজার ব্যবহার করুন।\n"
+            "- সুগন্ধিযুক্ত বা অ্যালকোহলযুক্ত সাবান মাখা সম্পূর্ণ বন্ধ রাখুন।\n\n"
+            "📋 **সঠিক চিকিৎসার জন্য আপনার কাছে ৩টি জরুরি প্রশ্ন:**\n"
+            "১. ত্বক কি লালচে হয়ে যায় বা চুলকানি অনুভূত হয়?\n"
+            "২. সমস্যাটি কি কেবল শীতে হয় নাকি সারা বছরই থাকে?\n"
+            "৩. বর্তমানে আপনি মুখ ধোয়ার পর কী ময়েশ্চারাইজার মাখেন?"
+        )
+        voice_text = "আমি ডক্টর সুপ্রিটস। শুষ্ক ত্বকে মুখ ধোয়ার পরই ময়েশ্চারাইজার ব্যবহার করুন। সঠিক প্রোডাক্টের জন্য আপনার লক্ষণ জানান।"
         suggested_q = [
-            "শুষ্ক ত্বকে কোন সিরাম সবচেয়ে ভালো?",
-            "ত্বকের খসখসে ভাব দূর করার উপায় কি?",
-            "ময়েশ্চারাইজার দিনে কতবার মাখব?"
+            "ত্বক ধোয়ার পর টান টান লাগে",
+            "স্কিন ব্যারিয়ার ঠিক করার উপায় কি?",
+            "শুষ্ক ত্বকে কোন ময়েশ্চারাইজার ভালো?"
         ]
 
     # 8. Skin Concern: Oily Skin & Open Pores
     elif any(k in msg_lower for k in ["oily", "teltele", "pore", "chokchoke", "ওইলি", "তেলতেলে", "পোরস"]):
-        concern_title = "✨ তৈলাক্ত ত্বক ও ওপেন পোরস নিয়ন্ত্রণের সমাধান"
-        concern_intro = "অতিরিক্ত সেবাম ও তেলতেলে ভাব দূর করে ওপেন পোরস সংকুচিত করার জন্য বিশেষ প্রোডাক্টসমূহ:"
-        voice_text = "তৈলাক্ত ত্বক ও খোলা লোমকূপ নিয়ন্ত্রণের জন্য অয়েল-ফ্রি ফোমিং ক্লিনজার ব্যবহারের পরামর্শ দেওয়া হচ্ছে।"
+        concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: তৈলাক্ত ত্বক ও খোলা লোমকূপ"
+        concern_intro = (
+            "অতিরিক্ত সেবাম নিঃসরণ ও লোমকূপ বন্ধ হয়ে যাওয়ার কারণে ত্বক তেলতেলে দেখায় ও ওপেন পোরস তৈরি হয়।\n\n"
+            "💡 **চিকিৎসাসংক্রান্ত প্রাথমিক লাইফস্টাইল পরামর্শ:**\n"
+            "- দিনে ২ বার ওয়াটার-বেসড জেন্টল ফোমিং ক্লিনজার দিয়ে মুখ পরিষ্কার করুন।\n"
+            "- ভারী অয়েলি ক্রিম বা নারিকেল তেল মুখে মাখা সম্পূর্ণ এড়িয়ে চলুন।\n"
+            "- সালিসিলিক এসিড বা নিয়াসিনামাইড যুক্ত হালকা জেল ময়েশ্চারাইজার ব্যবহার করুন।\n\n"
+            "📋 **সঠিক চিকিৎসার জন্য আপনার কাছে ৩টি জরুরি প্রশ্ন:**\n"
+            "১. আপনার পুরো মুখই কি তেলতেলে থাকে, নাকি শুধু কপাল ও নাকের টি-জোন (T-Zone)?\n"
+            "২. মুখে ব্ল্যাকহেডস বা হোয়াইটহেডসের সমস্যা আছে কি?\n"
+            "৩. বর্তমানে আপনি কী ধরনের ফেসওয়াশ ব্যবহার করছেন?"
+        )
+        voice_text = "আমি ডক্টর সুপ্রিটস। তৈলাক্ত ত্বকের জন্য অয়েল-ফ্রি জেন্টল ক্লিনজার ব্যবহার করুন। আপনার বর্তমান রুটিন জানান।"
         suggested_q = [
-            "তৈলাক্ত ত্বকের তেলতেলে ভাব কীভাবে কমাব?",
+            "আমার শুধু কপাল ও নাক তেলতেলে থাকে",
             "ওপেন পোরস ছোট করার উপায় কি?",
-            "তৈলাক্ত ত্বকে কোন ময়েশ্চারাইজার ব্যবহার করা উচিত?"
+            "তৈলাক্ত ত্বকের জন্য হালকা ময়েশ্চারাইজার"
         ]
 
     # 9. Skin Concern: Sensitive Skin
-    elif any(k in msg_lower for k in ["sensetive", "sensitive", "lal", "lalche", "jalan", "সংবেদনশীল", "সেনসিটিভ", "জ্বালাপোড়া"]):
-        concern_title = "🛡️ সংবেদনশীল (Sensitive) ত্বকের ব্যারিয়ার রিপেয়ার রুটিন"
-        concern_intro = "ত্বকের জ্বালাপোড়া ও লালচে ভাব দূর করে স্কিন ব্যারিয়ার পুনর্গঠন করার জন্য সুদিং উপাদান সমৃদ্ধ প্রোডাক্টসমূহ:"
-        voice_text = "সংবেদনশীল ত্বকের জ্বালাপোড়া কমানোর জন্য জেন্টল সুদিং কেয়ার ও ব্যারিয়ার ক্রিম ব্যবহারের পরামর্শ দেওয়া হচ্ছে।"
+    elif any(k in msg_lower for k in ["sensetive", "sensitive", "lal", "lalche", "jalan", "সংবেদনশীল", "সেনসিটিভ", "জ্বালাপোড়া"]):
+        concern_title = "🩺 ড. SUPRITS ডার্মাটোলজিক্যাল এ্যাসেসমেন্ট: সংবেদনশীল ত্বক ও লালচে ভাব"
+        concern_intro = (
+            "ত্বকের অতি-সংবেদনশীলতা, লালচে ভাব বা রোদে জ্বালাপোড়া করা স্কিন ব্যারিয়ার সংবেদনশীলতার লক্ষণ।\n\n"
+            "💡 **চিকিৎসাসংক্রান্ত প্রাথমিক লাইফস্টাইল পরামর্শ:**\n"
+            "- কোনো ধরনের স্ক্রাব বা কেমিক্যাল এক্সফোলিয়েটর ব্যবহার করবেন না।\n"
+            "- সুগন্ধিমুক্ত, অ্যালকোহলমুক্ত মৃদু সুদিং (Centella / Panthenol) প্রোডাক্ট ব্যবহার করুন।\n"
+            "- রোদে বের হলে ছাতা বা টুপি ব্যবহার নিশ্চিত করুন।\n\n"
+            "📋 **সঠিক চিকিৎসার জন্য আপনার কাছে ৩টি জরুরি প্রশ্ন:**\n"
+            "১. কোনো নতুন প্রোডাক্ট ব্যবহার করার পরই কি জ্বালাপোড়া বা লালচে ভাব শুরু হয়েছে?\n"
+            "২. ত্বকে চুলকানি বা ছোট ছোট এলার্জির দানার মতো লাল ভাব আছে কি?\n"
+            "৩. বর্তমানে আপনি মুখে কী মাখছেন?"
+        )
+        voice_text = "আমি ডক্টর সুপ্রিটস। সংবেদনশীল ত্বকে সুগন্ধিমুক্ত মৃদু প্রোডাক্ট ব্যবহার করা উচিত। আপনার বর্তমান রুটিন জানান।"
         suggested_q = [
-            "সংবেদনশীল ত্বকে কোন উপাদানগুলো এড়িয়ে চলব?",
-            "স্কিন ব্যারিয়ার ঠিক হতে কতদিন সময় লাগে?",
-            "লালচে ভাব কমানোর সেরা উপায় কি?"
+            "রোদে গেলে মুখ লাল হয়ে যায়",
+            "সংবেদনশীল ত্বকের সুদিং ক্রিম",
+            "কোন উপাদানগুলো এড়িয়ে চলব?"
         ]
 
     # 10. General Skincare / Fallback (No specific concern matched)
     else:
-        concern_title = "🌸 SUPRITS AI স্কিনকেয়ার ও প্রোডাক্ট অ্যাসিস্ট্যান্ট"
+        concern_title = "👨‍⚕️ ড. SUPRITS AI ডার্মাটোলজিস্ট ক্লিনিক"
         concern_intro = (
-            f"আপনার প্রশ্নের জন্য ধন্যবাদ! আমি **SUPRITS AI** স্কিনকেয়ার ও বিউটি কনসালটেন্ট।\n\n"
-            "আপনি আমাকে ত্বকের যেকোনো সমস্যা (যেমন: **ব্রণ, শুষ্কতা, কাল দাগ, পোরস, সংবেদনশীলতা**), "
-            "উপযুক্ত **প্রোডাক্টের সাজেস্ট**, **অর্ডার প্রক্রিয়া** বা **স্কিনকেয়ার রুটিন** নিয়ে যেকোনো প্রশ্ন করতে পারেন।\n\n"
-            "আপনার ত্বকের ধরন অনুযায়ী কিছু জনপ্রিয় সেরা প্রোডাক্ট:"
+            "আসসালামু আলাইকুম! আমি **ড. SUPRITS AI**, আপনার ব্যক্তিগত ডার্মাটোলজিক্যাল কনসালটেন্ট।\n\n"
+            "ত্বকের যেকোনো সমস্যা (যেমন: **ব্রণ, কাল দাগ, শুষ্কতা, তেলতেলে ভাব, লালচে ভাব বা সেনসিটিভিটি**) সঠিক চিকিৎসাসংক্রান্ত নিয়মে সমাধান করতে আমি আপনাকে সাহায্য করব।\n\n"
+            "📋 **সঠিক চিকিৎসার পরামর্শের জন্য আপনার লক্ষণগুলো শেয়ার করুন:**\n"
+            "১. আপনার ত্বকের প্রধান সমস্যাটি কি?\n"
+            "২. আপনার ত্বকের ধরণ কি (তৈলাক্ত, শুষ্ক, মিশ্র নাকি সংবেদনশীল)?\n"
+            "৩. সমস্যাটি কতদিন ধরে অনুভব করছেন?"
         )
-        voice_text = "আমি SUPRITS AI স্কিনকেয়ার কনসালটেন্ট। আপনার ত্বকের সমস্যা বা প্রোডাক্ট সংক্রান্ত বিষয়ে যেকোনো প্রশ্ন করতে পারেন।"
+        voice_text = "আসসালামু আলাইকুম! আমি ডক্টর সুপ্রিটস। আপনার ত্বকের যেকোনো সমস্যা বা লক্ষণের কথা আমাকে জানাতে পারেন।"
         suggested_q = [
-            "কীভাবে প্রোডাক্ট অর্ডার করব?",
-            "আমার ত্বকের ব্রণ কীভাবে কমাব?",
-            "ঢাকার ভেতরে ডেলিভারি চার্জ কত?"
+            "আমার মুখে ব্রণ ও কালো দাগ আছে",
+            "আমার ত্বক খুব শুষ্ক ও খসখসে",
+            "কীভাবে সঠিক প্রোডাক্ট অর্ডার করব?"
         ]
 
     rec_list = []
     labels = []
     match_scores = [95, 90, 85]
-
-    for idx, p in enumerate(top_products):
-        score = match_scores[min(idx, len(match_scores) - 1)]
-        labels.append(p.get("product_name", "Product")[:18])
-        rec_list.append({
-            "product_name": p.get("product_name"),
-            "brand": p.get("brand"),
-            "category": p.get("category"),
-            "price": p.get("price"),
-            "rating": p.get("rating", 4.8),
-            "image_url": p.get("image_url"),
-            "am_pm_routine": p.get("am_pm_routine", "Both"),
-            "match_score": score,
-            "suitability_reason": f"{', '.join(p.get('key_ingredients', [])[:2])} সমৃদ্ধ, যা ত্বকের {', '.join(p.get('targeted_concerns', [])[:2])} দূর করতে সাহায্য করে।",
-        })
 
     reply_lines = [
         f"### {concern_title}",
@@ -1174,60 +1204,61 @@ def extract_customer_details(text: str) -> Dict[str, Optional[str]]:
 
 
 # --- Multimodal Vision AI Image Analysis Handler ---
-VISION_SYSTEM_PROMPT = """You are Skincare Vision AI Consultant.
-Analyze the user's uploaded image.
+VISION_SYSTEM_PROMPT = """You are Dr. SUPRITS Multimodal Vision AI Dermatologist & Clinical Health Specialist.
+Analyze the user's uploaded photo (Face/Skin photo, Hair/Scalp photo, Body photo, or Product Bottle/Label).
 
-SMART MULTILINGUAL RESPONSE RULE:
-1. Default / Bangla / Banglish / Greetings -> BENGALI (বাংলা).
-2. English questions -> ENGLISH.
-3. Other languages -> TARGET USER LANGUAGE.
+CRITICAL HUMAN DERMATOLOGIST CLINICAL VISION PROTOCOL:
+1. ACT LIKE A REAL HUMAN CLINICAL DERMATOLOGIST:
+   - Perform a thorough medical visual examination of the uploaded photo as if examining a patient in your clinical office.
+   - Speak in a warm, empathetic, professional, and reassuring tone in Bengali.
 
-Determine the image type:
-1. "Skin Analysis": If the photo shows human skin, face, or a body area.
-   - Detect skin symptoms (acne, pimples, redness, dark spots, dryness, pores, dark circles).
-   - Write a detailed skin condition analysis and description in the target response language.
-   - Recommend matching products from CONTEXT.
-2. "Product Recognition": If the photo shows a skincare product bottle, tube, or box.
-   - Identify product name, brand, key active ingredients, suitability, and usage instructions in the target response language.
-   - Check context to see if we have this item or similar items in store.
+2. COMPREHENSIVE CLINICAL VISUAL ANALYSIS (দৃষ্টিসংক্রান্ত ডায়াগনস্টিক এ্যাসেসমেন্ট):
+   a) If Skin Photo (Face/Body):
+      - Identify skin type, visible lesions/symptoms (Acne, Inflammation, Hyperpigmentation/Dark Spots, Dryness, Redness, Open Pores, Dark Circles).
+      - Provide a clinical dermatological assessment (ডিগ্রি/সেভেরলটি, স্কিন ব্যারিয়ার কন্ডিশন, প্রাথমিক কারণ).
+      - Give expert medical lifestyle & skincare guidelines.
+      - Ask 2 to 3 clarifying diagnostic questions to complete the history taking before prescribing or pushing products!
+   b) If Hair & Scalp Photo:
+      - Analyze hair density, scalp condition (Dandruff, Oiliness, Scalp Redness, Dryness, Thinning).
+      - Provide trichological care advice and ask 2 diagnostic questions.
+   c) If Product Label Photo:
+      - Identify the product name, brand, key active ingredients, suitability, and usage instructions in Bengali.
+
+3. WHEN TO RECOMMEND PRODUCTS:
+   - ONLY include items in "recommended_products" when the user explicitly asks for product purchasing/suggestions or has provided complete details.
 
 Always return ONLY a valid JSON object matching this exact schema:
 {
-  "reply": "Bengali markdown description and analysis of the image.",
-  "voice_text": "A friendly 2-3 sentence Bengali audio speech summary suitable for Web Speech TTS playback.",
-  "image_analysis_type": "Skin Analysis" | "Product Recognition",
+  "reply": "Empathetic clinical visual assessment in Bengali formatted in clean Markdown with diagnostic findings, medical lifestyle advice, and 2-3 diagnostic questions.",
+  "voice_text": "A warm, reassuring doctor summary in 2-3 spoken Bengali sentences for Text-to-Speech playback.",
+  "image_analysis_type": "Skin Analysis",
   "detected_features": ["Acne", "Redness", "Dark Spots"],
-  "recommended_products": [
-    {
-      "product_name": "Product Name",
-      "brand": "Brand",
-      "category": "Category",
-      "price": 15.0,
-      "rating": 4.8,
-      "image_url": "url",
-      "match_score": 95,
-      "suitability_reason": "Bengali reason why product helps."
-    }
-  ],
+  "recommended_products": [],
   "routine_steps": {
-    "AM": ["1. Cleanser", "2. Serum", "3. Sunscreen"],
-    "PM": ["1. Cleanser", "2. Night Cream"]
+    "AM": ["1. Gentle Cleanser", "2. Hydrating Serum", "3. Sunscreen SPF 50"],
+    "PM": ["1. Gentle Cleanser", "2. Active Treatment", "3. Moisturizer"]
   },
   "chart": {
     "type": "bar",
     "title": "Skin Condition & Product Suitability (%)",
-    "labels": ["Product 1", "Product 2"],
+    "labels": ["Health Score", "Hydration Level", "Barrier Strength"],
     "datasets": [
       {
-        "label": "Match Percentage",
-        "data": [95, 90],
-        "backgroundColor": ["#10B981", "#8B5CF6"]
+        "label": "Analysis Metric (%)",
+        "data": [85, 78, 90],
+        "backgroundColor": ["#10B981", "#8B5CF6", "#F59E0B"]
       }
     ]
   },
+  "summary": {
+    "primary_concern": "Acne & Inflammation",
+    "skin_type": "Combination",
+    "key_active_ingredients": ["Salicylic Acid", "Niacinamide"]
+  },
   "suggested_questions": [
-    "এই প্রোডাক্টটি কতদিন ব্যবহার করতে হবে?",
-    "আমার কি সানস্ক্রিন ব্যবহার করা উচিত?"
+    "সমস্যাটি কতদিন ধরে হচ্ছে જણાવুন",
+    "বর্তমানে মুখে কোন ফেসওয়াশ মাখছেন?",
+    "আমার জন্য উপযোগী ডার্মাটোলজিক্যাল সিরাম"
   ]
 }
 
