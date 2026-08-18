@@ -113,14 +113,39 @@ async def get_rag_skincare_products(
     # Extract keywords from user message
     msg_lower = user_message.lower()
     
-    # Common skincare concern mapping
+    # Comprehensive skincare concern mapping with exhaustive English, Banglish & Native Bangla keywords
     symptom_keywords = {
-        "acne": ["acne", "pimple", "breakout", "blackhead", "whitehead", "blemish", "spot"],
-        "dryness": ["dry", "flaky", "tight", "rough", "dehydrated", "dryness"],
-        "hyperpigmentation": ["dark spot", "pigmentation", "scar", "mark", "uneven", "dull"],
-        "redness": ["red", "redness", "rosacea", "sensitive", "irritat", "inflam", "burn"],
-        "pores": ["pore", "enlarged", "clogged", "oil", "greasy", "shine"],
-        "aging": ["wrinkle", "fine line", "aging", "sagging", "mature"],
+        "acne": [
+            "acne", "pimple", "breakout", "blackhead", "whitehead", "blemish", "spot", "zits",
+            "bron", "brno", "bichi", "rash", "fuskuri", "fuat", "gamat", "gama", "choto bichi",
+            "lal bichi", "pimple", "brno dag", "ব্রণ", "ফুসকুড়ি", "বিচি", "র্যাশ", "লাল বিচি"
+        ],
+        "dryness": [
+            "dry", "flaky", "tight", "rough", "dehydrated", "dryness", "peeling",
+            "shusko", "mukh shukiye", "chalti", "shukno", "chamra ota", "chamra utha", "khaskhase",
+            "khaskhas", "tan tan", "শুষ্ক", "খসখসে", "চামড়া ওঠা", "টান টান", "শুষ্কতা"
+        ],
+        "hyperpigmentation": [
+            "dark spot", "pigmentation", "scar", "mark", "uneven", "dull", "dark circle", "under eye",
+            "kalo dag", "kalodag", "cokher niche", "chokher niche", "cokher", "chokher", "kalo",
+            "mecheta", "mechota", "dag", "dhabba", "calodag", "broner dag", "bron er dag", "mukh kalo",
+            "shyamla", "kalche", "কালো দাগ", "মেচেতা", "চোখের নিচে", "চোখের", "ব্রণের দাগ", "কালচে ভাব", "দাগ"
+        ],
+        "redness": [
+            "red", "redness", "rosacea", "sensitive", "irritat", "inflam", "burn", "allergic",
+            "lal", "lalche", "sensetive", "jalan", "jalapora", "chulkani", "mukh jala",
+            "লালচে", "সংবেদনশীল", "সেনসিটিভ", "জ্বালাপোড়া", "চুলকানি"
+        ],
+        "pores": [
+            "pore", "enlarged", "clogged", "oil", "greasy", "shine", "oily", "sebum",
+            "teltele", "chokchoke", "chiddro", "open pore", "boro pore", "mukh teltele",
+            "ওইলি", "তেলতেলে", "ওপেন পোরস", "লোমকূপ", "অতিরিক্ত তেল"
+        ],
+        "aging": [
+            "wrinkle", "fine line", "aging", "sagging", "mature", "anti-aging",
+            "boyosher chap", "boyos", "bhaaj", "bhaj", "chhal", "bolirekha",
+            "বয়সের ছাপ", "বলিরেখা", "ভাঁজ"
+        ],
     }
 
     detected_concerns = set()
@@ -133,8 +158,7 @@ async def get_rag_skincare_products(
         score = 0
         p_concerns = [c.lower() for c in p.get("targeted_concerns", [])]
         p_types = [t.lower() for t in p.get("skin_types", [])]
-        p_ingredients = [i.lower() for i in p.get("key_ingredients", [])]
-        p_text = f"{p.get('product_name')} {p.get('brand')} {p.get('description')}".lower()
+        p_text = f"{p.get('product_name')} {p.get('brand')} {p.get('description')} {' '.join(p.get('key_ingredients', []))}".lower()
 
         # Match skin type if provided
         if skin_type and skin_type.lower() in p_types:
@@ -143,12 +167,12 @@ async def get_rag_skincare_products(
         # Match detected concerns
         for dc in detected_concerns:
             if any(dc in c for c in p_concerns):
-                score += 30
+                score += 40
 
         # Direct text match with user message keywords
         for word in msg_lower.split():
             if len(word) > 3 and word in p_text:
-                score += 10
+                score += 15
 
         # High rating bonus
         score += int(p.get("rating", 4.0) * 2)
@@ -167,9 +191,59 @@ def generate_fallback_skincare_advisor(
     products: List[Dict[str, Any]],
     skin_type: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Smart rule-based fallback when OpenAI is unavailable."""
+    """Smart rule-based fallback when OpenAI is unavailable, dynamically matching user symptoms."""
     msg_lower = user_message.lower()
     top_products = products[:3]
+
+    # Dynamic concern topic & heading detection based on user input
+    if any(k in msg_lower for k in ["kalo dag", "kalodag", "cokher", "chokher", "dark spot", "dark circle", "pigmentation", "mecheta", "mechota", "চোখের", "কালো দাগ", "মেচেতা", "দাগ"]):
+        concern_title = "👁️ চোখের নিচের কালো দাগ ও স্কিন পিগমেন্টেশনের কাস্টম সমাধান"
+        concern_intro = "চোখের নিচের কালচে ভাব (Dark Circles) ও ত্বকের কালচে ছোপ দূর করার জন্য কার্যকরী উপাদান (যেমন Niacinamide, Vitamin C) সমৃদ্ধ প্রোডাক্টসমূহ:"
+        suggested_q = [
+            "চোখের নিচের কালো দাগ কতদিনে দূর হবে?",
+            "ভিটামিন সি সিরাম কীভাবে চোখে ব্যবহার করব?",
+            "কাল দাগের জন্য সানস্ক্রিন কতটা প্রয়োজনীয়?"
+        ]
+    elif any(k in msg_lower for k in ["acne", "bron", "brno", "pimple", "bichi", "rash", "fuskuri", "ব্রণ", "ফুসকুড়ি"]):
+        concern_title = "🧪 ব্রণ ও অ্যাকনে দূর করার বিশেষ ডার্মাটোলজিক্যাল সমাধান"
+        concern_intro = "ব্রণ, ফুসকুড়ি ও ক্লগড পোরস পরিষ্কার করার জন্য কার্যকরী Salicylic Acid (BHA) ও Tea Tree সমৃদ্ধ সেরা প্রোডাক্টসমূহ:"
+        suggested_q = [
+            "ব্রণ দূর হতে কতদিন সময় লাগবে?",
+            "ব্রণের দাগ দূর করার উপায় কি?",
+            "তৈলাক্ত ত্বকের জন্য কোন ফেসওয়াশ ভালো?"
+        ]
+    elif any(k in msg_lower for k in ["dry", "shusko", "khaskhase", "shukno", "chamra ota", "শুষ্ক", "খসখসে", "টান টান"]):
+        concern_title = "💧 শুষ্ক ত্বকের ডিপ হাইড্রেশন ও ময়েশ্চারাইজিং রুটিন"
+        concern_intro = "ত্বকের খসখসে ভাব ও শুষ্কতা দূর করে ত্বককে নরম ও হাইড্রেটেড রাখার জন্য বিশেষ প্রোডাক্টসমূহ:"
+        suggested_q = [
+            "শুষ্ক ত্বকে কোন সিরাম সবচেয়ে ভালো?",
+            "ত্বকের খসখসে ভাব দূর করার উপায় কি?",
+            "ময়েশ্চারাইজার দিনে কতবার মাখব?"
+        ]
+    elif any(k in msg_lower for k in ["oily", "teltele", "pore", "chokchoke", "ওইলি", "তেলতেলে", "পোরস"]):
+        concern_title = "✨ তৈলাক্ত ত্বক ও ওপেন পোরস নিয়ন্ত্রণের সমাধান"
+        concern_intro = "অতিরিক্ত সেবাম ও তেলতেলে ভাব দূর করে ওপেন পোরস সংকুচিত করার জন্য বিশেষ প্রোডাক্টসমূহ:"
+        suggested_q = [
+            "তৈলাক্ত ত্বকের তেলতেলে ভাব কীভাবে কমাব?",
+            "ওপেন পোরস ছোট করার উপায় কি?",
+            "তৈলাক্ত ত্বকে কোন ময়েশ্চারাইজার ব্যবহার করা উচিত?"
+        ]
+    elif any(k in msg_lower for k in ["sensetive", "sensitive", "lal", "lalche", "jalan", "সংবেদনশীল", "সেনসিটিভ", "জ্বালাপোড়া"]):
+        concern_title = "🛡️ সংবেদনশীল (Sensitive) ত্বকের ব্যারিয়ার রিপেয়ার রুটিন"
+        concern_intro = "ত্বকের জ্বালাপোড়া ও লালচে ভাব দূর করে স্কিন ব্যারিয়ার পুনর্গঠন করার জন্য সুদিং উপাদান সমৃদ্ধ প্রোডাক্টসমূহ:"
+        suggested_q = [
+            "সংবেদনশীল ত্বকে কোন উপাদানগুলো এড়িয়ে চলব?",
+            "স্কিন ব্যারিয়ার ঠিক হতে কতদিন সময় লাগে?",
+            "লালচে ভাব কমানোর সেরা উপায় কি?"
+        ]
+    else:
+        concern_title = "🌸 ত্বকের যত্ন ও কাস্টম ডার্মাটোলজিক্যাল পরামর্শ"
+        concern_intro = f"আপনার ত্বকের ধরণ (**{skin_type or 'সাধারণ'}**) অনুযায়ী তৈরি বিশেষ স্কিনকেয়ার প্রোডাক্ট ও রুটিন:"
+        suggested_q = [
+            "এই প্রোডাক্টগুলো কীভাবে সঠিকভাবে ব্যবহার করব?",
+            "আমার সংবেদনশীল ত্বকে কি এটা নিরাপদ?",
+            "ভালো ফেসওয়াশ ও সানস্ক্রিন কীভাবে বেছে নিব?"
+        ]
 
     rec_list = []
     labels = []
@@ -187,13 +261,13 @@ def generate_fallback_skincare_advisor(
             "image_url": p.get("image_url"),
             "am_pm_routine": p.get("am_pm_routine", "Both"),
             "match_score": score,
-            "suitability_reason": f"{', '.join(p.get('key_ingredients', [])[:2])} সমৃদ্ধ, যা আপনার ত্বকের {', '.join(p.get('targeted_concerns', [])[:2])} দূর করতে এবং উজ্জ্বলতা বাড়াতে সাহায্য করে।",
+            "suitability_reason": f"{', '.join(p.get('key_ingredients', [])[:2])} সমৃদ্ধ, যা ত্বকের {', '.join(p.get('targeted_concerns', [])[:2])} দূর করতে সাহায্য করে।",
         })
 
     reply_lines = [
-        "### 🌸 ত্বকের যত্ন ও কাস্টম ডার্মাটোলজিক্যাল পরামর্শ",
-        f"আপনার ত্বকের ধরণ (**{skin_type or 'সাধারণ'}**) অনুযায়ী আপনার জন্য তৈরি বিশেষ স্কিনকেয়ার প্রোডাক্ট ও রুটিন:\n",
-        "#### 🛍️ আপনার ত্বকের জন্য সেরা প্রোডাক্টসমূহ:",
+        f"### {concern_title}",
+        f"{concern_intro}\n",
+        "#### 🛍️ আপনার জন্য প্রস্তাবিত প্রোডাক্টসমূহ:",
     ]
     for r in rec_list:
         reply_lines.append(
@@ -202,14 +276,14 @@ def generate_fallback_skincare_advisor(
 
     reply_lines.extend([
         "\n#### ☀️ সকাল (AM) ও 🌙 রাত (PM) ব্যবহারের সঠিক নিয়ম:",
-        "- **সকাল (AM)**: ফেসওয়াশ ➔ হাইড্রেটিং সিরাম ➔ হালকা ময়েশ্চারাইজার ➔ সানস্ক্রিন SPF 50",
-        "- **রাত (PM)**: জেন্টল ফেসওয়াশ ➔ স্কিন ট্রিটমেন্ট সিরাম ➔ নাইট রিপেয়ার ক্রিম",
+        "- **সকাল (AM)**: জেন্টল ফেসওয়াশ ➔ ব্রাইটেনিং / হাইড্রেটিং সিরাম ➔ ময়েশ্চারাইজার ➔ সানস্ক্রিন SPF 50",
+        "- **রাত (PM)**: ফেসওয়াশ ➔ ট্রিটমেন্ট সিরাম / নাইট এসেন্স ➔ রিপেয়ার নাইট ক্রিম",
     ])
 
     voice_text = (
-        f"আপনার ত্বকের সুরক্ষায় আমি {rec_list[0]['product_name'] if rec_list else 'উপযুক্ত ক্লিনজার'} "
+        f"আপনার সমস্যার জন্য আমি {rec_list[0]['product_name'] if rec_list else 'উপযুক্ত সিরাম'} "
         f"এবং {rec_list[1]['product_name'] if len(rec_list) > 1 else 'ময়েশ্চারাইজার'} ব্যবহারের পরামর্শ দিচ্ছি। "
-        f"নিয়মিত সকাল ও রাতে এই রুটিন মেনে চললে আপনার ত্বক থাকবে সুন্দর ও দাগহীন।"
+        f"নিয়মিত রুটিন মেনে চললে আপনার ত্বক থাকবে সুন্দর ও উজ্জ্বল।"
     )
 
     chart = {
@@ -230,15 +304,11 @@ def generate_fallback_skincare_advisor(
         "voice_text": voice_text,
         "recommended_products": rec_list,
         "routine_steps": {
-            "AM": ["১. ফেসওয়াশ / জেন্টল ক্লিনজার", "২. ভিটামিন সি / নিয়াসিনামাইড সিরাম", "৩. হালকা ময়েশ্চারাইজার", "৪. সানস্ক্রিন SPF 50"],
-            "PM": ["১. ফেসওয়াশ", "২. বিএইচএ এক্সফোলিয়েটর / রেটিনল ট্রিটমেন্ট", "৩. ডিপ হাইড্রেশন নাইট ক্রিম"],
+            "AM": ["১. জেন্টল ফেসওয়াশ", "২. ভিটামিন সি / নিয়াসিনামাইড সিরাম", "৩. হালকা ময়েশ্চারাইজার", "৪. সানস্ক্রিন SPF 50"],
+            "PM": ["১. ফেসওয়াশ", "২. অ্যাক্টিভ ট্রিটমেন্ট সিরাম", "৩. ডিপ রিপেয়ার নাইট ক্রিম"],
         },
         "chart": chart,
-        "suggested_questions": [
-            "এই প্রোডাক্টগুলো কীভাবে সঠিকভাবে ব্যবহার করব?",
-            "আমার সংবেদনশীল ত্বকে কি এটা নিরাপদ?",
-            "ব্রণ দূর করতে কোন সানস্ক্রিন সবচেয়ে ভালো?",
-        ],
+        "suggested_questions": suggested_q,
     }
 
 
