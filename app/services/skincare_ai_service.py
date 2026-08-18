@@ -188,9 +188,15 @@ def generate_fallback_skincare_advisor(
     user_message: str,
     products: List[Dict[str, Any]],
     skin_type: Optional[str] = None,
+    history: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Smart rule-based fallback when OpenAI/LLM is unavailable, dynamically matching user intent."""
     msg_lower = user_message.lower()
+    full_context_text = msg_lower
+    if history and isinstance(history, list):
+        for h in history:
+            full_context_text += " " + str(h.get("message", "")).lower() + " " + str(h.get("reply", "")).lower()
+
     top_products = products[:3]
     is_non_routine_intent = False
 
@@ -946,7 +952,7 @@ async def process_skincare_symptom_analysis(
 
     # Tier 4: Local Rule-Based Advisor Fallback
     logger.error("All AI providers unavailable or failed. Using local rule-based advisor.")
-    return generate_fallback_skincare_advisor(user_message, top_products, skin_type)
+    return generate_fallback_skincare_advisor(user_message, top_products, skin_type, history=history)
 
 
 # --- Feature 2: Ingredient Safety & Conflict Checker ---
