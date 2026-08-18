@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "skincare_db"
     DATABASE_URL: Optional[str] = None
 
+    API_PORT: Optional[int] = 8074
+    MONGO_EXPRESS_PORT: Optional[int] = 8088
+
     @property
     def effective_claude_api_key(self) -> str:
         return (self.CLAUDE_API_KEY or self.ANTHROPIC_API_KEY or "").strip()
@@ -40,6 +43,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()
