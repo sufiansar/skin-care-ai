@@ -14,12 +14,22 @@ SKINCARE_COLORS = ["#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#3B82F6", "#06B6
 
 SYSTEM_PROMPT = """You are Skincare AI Advisor, an expert AI Dermatological consultant and Skincare E-Commerce specialist.
 
+SMART MULTILINGUAL RESPONSE RULE:
+1. DEFAULT LANGUAGE & BANGLISH -> BENGALI (বাংলা):
+   - If the user writes in BENGALI (বাংলা) or BANGLISH (Bengali phonetically written in English letters e.g. "amr pimple hoise", "mukh dry lagtese", "bhalo cleanser kon ta", "kibhabe use korbo") OR sends simple greetings ("hi", "hello", "hey", "assalamu alaikum"):
+     -> You MUST ALWAYS respond in warm, natural, polite, and elegant BENGALI (বাংলা ভাষায়).
+2. ENGLISH QUERY -> ENGLISH:
+   - If the user asks a full question/query in ENGLISH (e.g. "Recommend a cleanser for sensitive skin", "How do I treat hyperpigmentation?"):
+     -> Respond in clear, professional ENGLISH.
+3. OTHER LANGUAGES -> TARGET USER LANGUAGE:
+   - If the user writes in Spanish, French, Arabic, German, etc., respond in THAT SPECIFIC USER LANGUAGE.
+
 Your goal is to analyze the user's skin symptoms/concerns (such as acne, dryness, hyperpigmentation, redness, sensitivity, pores, or aging) and recommend exact matching skincare products from the provided CONTEXT.
 
 Always return ONLY a valid JSON object matching this exact schema:
 {
-  "reply": "Clear, encouraging, markdown-formatted response explaining the user's skin symptoms, targeted active ingredients (e.g., Salicylic Acid, Niacinamide, Hyaluronic Acid), and recommended products with reasons.",
-  "voice_text": "A warm, natural 2-3 sentence conversational voice summary suitable for Web Speech API Text-to-Speech playback. Example: 'Based on your acne and dark spots, I recommend starting with Salicylic Acid and Niacinamide. Here is a custom morning and night routine for healthy, glowing skin.'",
+  "reply": "Clear, encouraging, markdown-formatted response explaining the user's skin symptoms, targeted active ingredients, and recommended products in the target language (defaulting to Bengali for greetings, Bangla & Banglish).",
+  "voice_text": "A warm, natural 2-3 sentence conversational voice summary matching the target response language, suitable for Web Speech API Text-to-Speech playback.",
   "recommended_products": [
     {
       "product_name": "Product Name",
@@ -30,15 +40,15 @@ Always return ONLY a valid JSON object matching this exact schema:
       "image_url": "url",
       "am_pm_routine": "Both",
       "match_score": 95,
-      "suitability_reason": "Contains 2% Salicylic Acid to clear acne and clogged pores."
+      "suitability_reason": "Suitability reason in the target language."
     }
   ],
   "routine_steps": {
-    "AM": ["1. Gentle Cleanser", "2. Vitamin C / Niacinamide Serum", "3. Moisturizer", "4. Sunscreen SPF 50"],
-    "PM": ["1. Cleanser", "2. BHA / Treatment", "3. Soothing Moisturizer"]
+    "AM": ["1. Cleanser", "2. Serum", "3. Moisturizer", "4. Sunscreen SPF 50"],
+    "PM": ["1. Cleanser", "2. BHA / Active Treatment", "3. Night Cream"]
   },
   "chart": {
-    "type": "bar" | "pie" | "doughnut",
+    "type": "bar",
     "title": "Skin Concern Suitability Match (%)",
     "labels": ["Product 1", "Product 2", "Product 3"],
     "datasets": [
@@ -55,15 +65,15 @@ Always return ONLY a valid JSON object matching this exact schema:
     "key_active_ingredients": ["Salicylic Acid", "Niacinamide"]
   },
   "suggested_questions": [
-    "How long does it take to see results?",
-    "Can I use Vitamin C and Salicylic Acid together?",
-    "What sunscreen is best for acne-prone skin?"
+    "Suggested question 1 in target language",
+    "Suggested question 2 in target language",
+    "Suggested question 3 in target language"
   ]
 }
 
 Rules:
-1. "reply" MUST be formatted in clean Markdown with clear headings and bullet points.
-2. "voice_text" MUST be short, friendly, and easy to listen to (no markdown syntax, plain natural text).
+1. "reply" MUST be formatted in clean Markdown with clear headings and bullet points in the target language determined by Smart Multilingual Response Rule.
+2. "voice_text" MUST be short, friendly spoken text matching the target language (plain text, no markdown).
 3. Do NOT fabricate products not present in the CONTEXT.
 4. Return ONLY raw JSON without markdown code block wrappers.
 """
@@ -172,38 +182,38 @@ def generate_fallback_skincare_advisor(
             "image_url": p.get("image_url"),
             "am_pm_routine": p.get("am_pm_routine", "Both"),
             "match_score": score,
-            "suitability_reason": f"Formulated with {', '.join(p.get('key_ingredients', [])[:2])} to target {', '.join(p.get('targeted_concerns', [])[:2])}.",
+            "suitability_reason": f"{', '.join(p.get('key_ingredients', [])[:2])} সমৃদ্ধ, যা আপনার ত্বকের {', '.join(p.get('targeted_concerns', [])[:2])} দূর করতে এবং উজ্জ্বলতা বাড়াতে সাহায্য করে।",
         })
 
     reply_lines = [
-        "### 🌸 Personal Skincare & Symptom Analysis",
-        f"Based on your skin profile ({skin_type or 'General'}), here is your custom dermatological product recommendation:\n",
-        "#### 🛍️ Recommended Products:",
+        "### 🌸 ত্বকের যত্ন ও কাস্টম ডার্মাটোলজিক্যাল পরামর্শ",
+        f"আপনার ত্বকের ধরণ (**{skin_type or 'সাধারণ'}**) অনুযায়ী আপনার জন্য তৈরি বিশেষ স্কিনকেয়ার প্রোডাক্ট ও রুটিন:\n",
+        "#### 🛍️ আপনার ত্বকের জন্য সেরা প্রোডাক্টসমূহ:",
     ]
     for r in rec_list:
         reply_lines.append(
-            f"- **{r['product_name']}** ({r['brand']}) - `${r['price']}`\n  *Why it works*: {r['suitability_reason']}"
+            f"- **{r['product_name']}** ({r['brand']}) - `${r['price']}`\n  *কার্যকারিতা*: {r['suitability_reason']}"
         )
 
     reply_lines.extend([
-        "\n#### ☀️ AM & 🌙 PM Daily Routine:",
-        "- **Morning (AM)**: Cleanser ➔ Hydrating Serum ➔ Moisturizer ➔ SPF 50 Sunscreen",
-        "- **Evening (PM)**: Gentle Cleanser ➔ Active Treatment Serum ➔ Barrier Repair Night Cream",
+        "\n#### ☀️ সকাল (AM) ও 🌙 রাত (PM) ব্যবহারের সঠিক নিয়ম:",
+        "- **সকাল (AM)**: ফেসওয়াশ ➔ হাইড্রেটিং সিরাম ➔ হালকা ময়েশ্চারাইজার ➔ সানস্ক্রিন SPF 50",
+        "- **রাত (PM)**: জেন্টল ফেসওয়াশ ➔ স্কিন ট্রিটমেন্ট সিরাম ➔ নাইট রিপেয়ার ক্রিম",
     ])
 
     voice_text = (
-        f"Based on your skin symptoms, I recommend using {rec_list[0]['product_name'] if rec_list else 'our top cleanser'} "
-        f"and {rec_list[1]['product_name'] if len(rec_list) > 1 else 'moisturizer'}. "
-        f"Following a consistent morning and night routine will restore your skin barrier and clear your complexion."
+        f"আপনার ত্বকের সুরক্ষায় আমি {rec_list[0]['product_name'] if rec_list else 'উপযুক্ত ক্লিনজার'} "
+        f"এবং {rec_list[1]['product_name'] if len(rec_list) > 1 else 'ময়েশ্চারাইজার'} ব্যবহারের পরামর্শ দিচ্ছি। "
+        f"নিয়মিত সকাল ও রাতে এই রুটিন মেনে চললে আপনার ত্বক থাকবে সুন্দর ও দাগহীন।"
     )
 
     chart = {
         "type": "bar",
-        "title": "Skin Concern Suitability Match (%)",
-        "labels": labels if labels else ["No Products"],
+        "title": "ত্বকের সাথে প্রোডাক্টের উপযুক্ততার পার্সেন্টেজ (%)",
+        "labels": labels if labels else ["কোন প্রোডাক্ট নেই"],
         "datasets": [
             {
-                "label": "Suitability Match %",
+                "label": "উপযুক্ততা (%)",
                 "data": match_scores[:len(labels)],
                 "backgroundColor": SKINCARE_COLORS[:len(labels)],
             }
@@ -215,14 +225,14 @@ def generate_fallback_skincare_advisor(
         "voice_text": voice_text,
         "recommended_products": rec_list,
         "routine_steps": {
-            "AM": ["1. Gentle Cleanser", "2. Vitamin C / Niacinamide Serum", "3. Lightweight Moisturizer", "4. Broad Spectrum SPF 50 Sunscreen"],
-            "PM": ["1. Cleanser", "2. Exfoliating BHA or Retinol Treatment", "3. Deep Hydration Repair Cream"],
+            "AM": ["১. ফেসওয়াশ / জেন্টল ক্লিনজার", "২. ভিটামিন সি / নিয়াসিনামাইড সিরাম", "৩. হালকা ময়েশ্চারাইজার", "৪. সানস্ক্রিন SPF 50"],
+            "PM": ["১. ফেসওয়াশ", "২. বিএইচএ এক্সফোলিয়েটর / রেটিনল ট্রিটমেন্ট", "৩. ডিপ হাইড্রেশন নাইট ক্রিম"],
         },
         "chart": chart,
         "suggested_questions": [
-            "How should I layer these products?",
-            "Is this safe for sensitive skin?",
-            "What sunscreen should I pair with this?",
+            "এই প্রোডাক্টগুলো কীভাবে সঠিকভাবে ব্যবহার করব?",
+            "আমার সংবেদনশীল ত্বকে কি এটা নিরাপদ?",
+            "ব্রণ দূর করতে কোন সানস্ক্রিন সবচেয়ে ভালো?",
         ],
     }
 
@@ -894,13 +904,18 @@ def extract_customer_details(text: str) -> Dict[str, Optional[str]]:
 VISION_SYSTEM_PROMPT = """You are Skincare Vision AI Consultant.
 Analyze the user's uploaded image.
 
+SMART MULTILINGUAL RESPONSE RULE:
+1. Default / Bangla / Banglish / Greetings -> BENGALI (বাংলা).
+2. English questions -> ENGLISH.
+3. Other languages -> TARGET USER LANGUAGE.
+
 Determine the image type:
 1. "Skin Analysis": If the photo shows human skin, face, or a body area.
    - Detect skin symptoms (acne, pimples, redness, dark spots, dryness, pores, dark circles).
-   - Write a detailed skin condition analysis and description in BENGALI (বাংলা ভাষায়).
+   - Write a detailed skin condition analysis and description in the target response language.
    - Recommend matching products from CONTEXT.
 2. "Product Recognition": If the photo shows a skincare product bottle, tube, or box.
-   - Identify product name, brand, key active ingredients, suitability, and usage instructions in BENGALI (বাংলা ভাষায়).
+   - Identify product name, brand, key active ingredients, suitability, and usage instructions in the target response language.
    - Check context to see if we have this item or similar items in store.
 
 Always return ONLY a valid JSON object matching this exact schema:
