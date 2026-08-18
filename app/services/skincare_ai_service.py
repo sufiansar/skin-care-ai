@@ -741,7 +741,7 @@ async def process_skincare_symptom_analysis(
             ],
         }
 
-    top_products = await get_rag_skincare_products(user_message=user_message, skin_type=skin_type)
+    top_products = await get_rag_skincare_products(user_message=user_message, skin_type=skin_type, history=history)
 
     # Check if user message contains order placement details (Phone + Name/Address/Product)
     details = extract_customer_details(user_message)
