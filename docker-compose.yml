@@ -57,7 +57,7 @@ services:
     image: mongo:7.0
     container_name: skincare_mongo
     ports:
-      - "27019:27017"
+      - "27020:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
