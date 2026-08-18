@@ -372,21 +372,39 @@ def generate_fallback_skincare_advisor(
 
     # 10. General Skincare / Fallback (No specific concern matched)
     else:
-        concern_title = "👨‍⚕️ ড. SUPRITS AI ডার্মাটোলজিস্ট ক্লিনিক"
-        concern_intro = (
-            "আসসালামু আলাইকুম! আমি **ড. SUPRITS AI**, আপনার ব্যক্তিগত ডার্মাটোলজিক্যাল কনসালটেন্ট।\n\n"
-            "ত্বকের যেকোনো সমস্যা (যেমন: **ব্রণ, কাল দাগ, শুষ্কতা, তেলতেলে ভাব, লালচে ভাব বা সেনসিটিভিটি**) সঠিক চিকিৎসাসংক্রান্ত নিয়মে সমাধান করতে আমি আপনাকে সাহায্য করব।\n\n"
-            "📋 **সঠিক চিকিৎসার পরামর্শের জন্য আপনার লক্ষণগুলো শেয়ার করুন:**\n"
-            "১. আপনার ত্বকের প্রধান সমস্যাটি কি?\n"
-            "২. আপনার ত্বকের ধরণ কি (তৈলাক্ত, শুষ্ক, মিশ্র নাকি সংবেদনশীল)?\n"
-            "৩. সমস্যাটি কতদিন ধরে অনুভব করছেন?"
-        )
-        voice_text = "আসসালামু আলাইকুম! আমি ডক্টর সুপ্রিটস। আপনার ত্বকের যেকোনো সমস্যা বা লক্ষণের কথা আমাকে জানাতে পারেন।"
-        suggested_q = [
-            "আমার মুখে ব্রণ ও কালো দাগ আছে",
-            "আমার ত্বক খুব শুষ্ক ও খসখসে",
-            "কীভাবে সঠিক প্রোডাক্ট অর্ডার করব?"
-        ]
+        is_english = any(w in msg_lower for w in ["can you", "help", "hello", "hi", "how", "what", "please", "doctor"]) and not any('\u0980' <= c <= '\u09FF' for c in user_message)
+        if is_english:
+            concern_title = "👨‍⚕️ Dr. SUPRITS AI Dermatologist Clinic"
+            concern_intro = (
+                "Hello and welcome! I am **Dr. SUPRITS AI**, your personal AI Dermatologist & Clinical Health Specialist.\n\n"
+                "I am here to help you with any skin, hair, or body care concern (such as **acne, dark spots, dryness, hair loss, or sensitive skin**).\n\n"
+                "📋 **To provide you with accurate medical guidance, please share:**\n"
+                "1. What is your primary skin or hair concern?\n"
+                "2. What is your skin type (Oily, Dry, Combination, Sensitive)?\n"
+                "3. How long have you been experiencing this issue?"
+            )
+            voice_text = "Hello! Welcome to Dr. SUPRITS AI Clinic. How may I help you with your skin or hair care today?"
+            suggested_q = [
+                "I have acne and dark spots on my face",
+                "What cleanser is best for oily skin?",
+                "How do I order products via cash on delivery?"
+            ]
+        else:
+            concern_title = "👨‍⚕️ ড. SUPRITS AI ডার্মাটোলজিস্ট ক্লিনিক"
+            concern_intro = (
+                "আসসালামু আলাইকুম! আমি **ড. SUPRITS AI**, আপনার ব্যক্তিগত ডার্মাটোলজিক্যাল কনসালটেন্ট।\n\n"
+                "ত্বকের যেকোনো সমস্যা (যেমন: **ব্রণ, কাল দাগ, শুষ্কতা, তেলতেলে ভাব, লালচে ভাব বা সেনসিটিভিটি**) সঠিক চিকিৎসাসংক্রান্ত নিয়মে সমাধান করতে আমি আপনাকে সাহায্য করব।\n\n"
+                "📋 **সঠিক চিকিৎসার পরামর্শের জন্য আপনার লক্ষণগুলো শেয়ার করুন:**\n"
+                "১. আপনার ত্বকের প্রধান সমস্যাটি কি?\n"
+                "২. আপনার ত্বকের ধরণ কি (তৈলাক্ত, শুষ্ক, মিশ্র নাকি সংবেদনশীল)?\n"
+                "৩. সমস্যাটি কতদিন ধরে অনুভব করছেন?"
+            )
+            voice_text = "আসসালামু আলাইকুম! আমি ডক্টর সুপ্রিটস। আপনার ত্বকের যেকোনো সমস্যা বা লক্ষণের কথা আমাকে জানাতে পারেন।"
+            suggested_q = [
+                "আমার মুখে ব্রণ ও কালো দাগ আছে",
+                "আমার ত্বক খুব শুষ্ক ও খসখসে",
+                "কীভাবে সঠিক প্রোডাক্ট অর্ডার করব?"
+            ]
 
     rec_list = []
     labels = []
@@ -397,11 +415,11 @@ def generate_fallback_skincare_advisor(
         f"{concern_intro}\n",
     ]
 
-    if not is_non_routine_intent:
+    if rec_list:
         reply_lines.append("#### 🛍️ আপনার জন্য প্রস্তাবিত প্রোডাক্টসমূহ:")
         for r in rec_list:
             reply_lines.append(
-                f"- **{r['product_name']}** ({r['brand']}) - `${r['price']}`\n  *কার্যকারিতা*: {r['suitability_reason']}"
+                f"- **{r['product_name']}** ({r['brand']}) - `৳{r['price']}`\n  *কার্যকারিতা*: {r['suitability_reason']}"
             )
 
         reply_lines.extend([
